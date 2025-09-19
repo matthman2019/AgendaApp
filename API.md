@@ -31,7 +31,7 @@ OOP is a concept that can be hard to grasp.
 
 2. Java
 -- Pros: Also pretty easy to learn (so I hear)
--- Cons: Verbose, We don't all know Java, Java is harder to setup than Python. Object Oriented Programming is hard to learn
+-- Cons: Verbose, We don't all know Java, Java is harder to setup than Python (in my opinion). Object Oriented Programming is hard to learn
 
 3. HTML, CSS, Javascript
 -- Pros: Website! JS doesn't use OOP, it's very functionally based and is also easy to learn.
