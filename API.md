@@ -16,6 +16,12 @@ I'm going to suggest we use the following libraries for our project:
 - tkinter.ttk (I suggest we use tkinter for applications. Specifically, I suggest we use the tkinter.ttk for more functionality.)
 - ttkbootstrap (will need to be installed. Makes ttk look pretty, and also has more Widgets. One of its widgets is a date-picker widget, which will save LOTS of time.)
 
+# Casing
+
+For ease, I suggest we use CapsCase for class names and camelCase for methods, variables, etc.
+(I like using camelCase already, and I believe Java uses it too.)
+I might use snake_case for local variables, we'll see.
+
 # Challenges that I see coming
 
 ## Learning new Languages
@@ -37,3 +43,10 @@ OOP is a concept that can be hard to grasp.
 -- Pros: Website! JS doesn't use OOP, it's very functionally based and is also easy to learn.
 -- Cons: I (MZ) hate working with HTML and CSS. I'm super inefficient with it.
 -- More Cons: To make this app remember notes / todos effectively, we need to setup accounts and setup a server. This is a TON of work and I'm not great at it. 
+
+## Tkinter's Programming Style
+
+Tkinter uses events and subscription to work.
+This can be worked around, it's just not how I like to make my programs run.
+And frankly, I'm not sure if minecraft mods are built using event-based programming.
+What I can say, however, is that event-based programming is easy to explain and learn.

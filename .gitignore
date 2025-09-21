@@ -1,1 +1,3 @@
 /agenda_venv
+# I was using this file to test to see if SQL was usable
+databasetest.py
