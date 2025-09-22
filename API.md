@@ -48,6 +48,5 @@ Attributes
 A collection of Notes.
 
 Attributes
-- title : str = The name of the Notebook
-- id : int = the ID of the notebook. Must be unique.
+- title : str = The name of the Notebook. Must be unique.
 - notes : list (NOT SAVED) = this list is the notes that are inside the notebook. It is generated at runtime for ease in programming.

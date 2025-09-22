@@ -1,15 +1,22 @@
-# A note is, well, a note. Like a page in a notebook, it has a title and a body.
+# A notebook. It holds notes
 
-from datetime import datetime, timedelta
 from dataclasses import dataclass
+from Note import Note, datetime
 import json
 
-@dataclass
-class Note:
-    title : str = "Untitled Note"
-    lastedit : datetime = datetime.today()
-    body : str = ""
-    notebook : str | None = None
+class Notebook:
+    
+    titlesUsed = []
+
+    def __init__(self, title : str = "Untitled Notebook", notes : list = []):
+        while title in Notebook.titlesUsed:
+            title += "2"
+        self.title = title
+        self.notes = []
+
+    def add_note(self, note : Note):
+        note.notebook = self.title
+        self.notes.append(note)
 
     def to_dict(self):
         my_dict = {}
@@ -27,19 +34,17 @@ class Note:
             value = getattr(self, attributeName)
             
             # making sure that attribut
-            if isinstance(value, datetime):
-                value = value.isoformat()
-            elif isinstance(value, timedelta):
-                repetionTime = value
-                # I got angry, so this is my solution. No fancy methods. Just storing days, seconds, and microseconds
-                value = f"{str(repetionTime.days)}/{str(repetionTime.seconds)}/{str(repetionTime.microseconds)}"
+            if attributeName == "notes":
+                continue
             my_dict[attributeName] = value
         return my_dict
     
     def to_json(self):
         return json.dumps(self.to_dict())
-    
 
 if __name__ == "__main__":
+    notebook = Notebook("E")
     note = Note("The First Note", datetime.today(), "This is the first note!", None)
+    notebook.add_note(note)
+    print(notebook.to_json())
     print(note.to_json())
