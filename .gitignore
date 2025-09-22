@@ -1,3 +1,5 @@
 /agenda_venv
+/Classes/__pycache__
+/__pycache__
 # I was using this file to test to see if SQL was usable
 databasetest.py
