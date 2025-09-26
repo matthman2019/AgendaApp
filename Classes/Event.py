@@ -23,9 +23,23 @@ class Event(PlannerEntry):
                 self.repeatTime = timedelta(366)
             else:
                 self.repeatTime = timedelta(365)
+    
+    @classmethod
+    def from_dict(cls, dictionary:dict) -> "Event":
+        newEntry = Event()
+        newEntry.name = dictionary["name"]
+        newEntry.description = dictionary["description"]
+        newEntry.occurance = datetime.fromisoformat(dictionary["occurance"])
+        newEntry.color = dictionary["color"]
+        newEntry.repeats = dictionary["repeats"]
+        repeatTime = dictionary["repeatTime"]
+        days, seconds, microseconds = repeatTime.split("/")
+        newEntry.repeatTime = timedelta(float(days), float(seconds), float(microseconds))
+        return newEntry
 
 if __name__ == "__main__":
     event1 = Event("First event!")
-    print(event1.to_json())
+    print(event1)
+    print(Event.from_dict(event1.to_dict()))
 
     

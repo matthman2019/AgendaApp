@@ -42,6 +42,15 @@ class PlannerEntry:
     def to_json(self):
         return json.dumps(self.to_dict())
     
+    @classmethod
+    def from_dict(cls, dictionary:dict) -> "PlannerEntry":
+        newEntry = PlannerEntry()
+        newEntry.name = dictionary["name"]
+        newEntry.description = dictionary["description"]
+        newEntry.occurance = datetime.fromisoformat(dictionary["occurance"])
+        newEntry.color = dictionary["color"]
+        return newEntry
+    
     def __sub__(self, other : "PlannerEntry") -> timedelta:
         return self.occurance - other.occurance
     

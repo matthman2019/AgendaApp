@@ -4,15 +4,19 @@ from dataclasses import dataclass
 from Note import Note, datetime
 import json
 
+titlesUsed = []
+
 class Notebook:
-    
-    titlesUsed = []
 
     def __init__(self, title : str = "Untitled Notebook", notes : list = []):
-        while title in Notebook.titlesUsed:
+        global titlesUsed
+        while title in titlesUsed:
             title += "2"
         self.title = title
         self.notes = []
+    
+    def __str__(self):
+        return f"Notebook: {self.title}"
 
     def add_note(self, note : Note):
         note.notebook = self.title
@@ -41,6 +45,14 @@ class Notebook:
     
     def to_json(self):
         return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_dict(cls, dictionary:dict) -> "Notebook":
+        newNotebook = Notebook()
+        newNotebook.title = dictionary["title"]
+        return newNotebook
+
+
 
 if __name__ == "__main__":
     notebook = Notebook("E")

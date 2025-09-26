@@ -15,6 +15,18 @@ class ToDo(PlannerEntry):
         
         super().__init__(name, description, occurance, color)
         self.completed = completed
+    
+    @classmethod
+    def from_dict(cls, dictionary:dict) -> "ToDo":
+        newEntry = ToDo()
+        newEntry.name = dictionary["name"]
+        newEntry.description = dictionary["description"]
+        newEntry.occurance = datetime.fromisoformat(dictionary["occurance"])
+        newEntry.color = dictionary["color"]
+        newEntry.completed = dictionary["completed"]
+        return newEntry
 
 if __name__ == "__main__":
-    pass
+    todo = ToDo()
+    print(todo.completed)
+    print(type(ToDo.from_dict(todo.to_dict()).completed))

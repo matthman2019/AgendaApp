@@ -1,7 +1,7 @@
 # A note is, well, a note. Like a page in a notebook, it has a title and a body.
 
 from datetime import datetime, timedelta
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 
 @dataclass
@@ -38,8 +38,19 @@ class Note:
     
     def to_json(self):
         return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_dict(cls, dictionary : dict):
+        newNote = Note()
+        newNote.title = dictionary["title"]
+        newNote.lastedit = datetime.fromisoformat(dictionary["lastedit"])
+        newNote.body = dictionary["body"]
+        newNote.notebook = dictionary["notebook"]
+        return newNote
     
 
 if __name__ == "__main__":
     note = Note("The First Note", datetime.today(), "This is the first note!", None)
-    print(note.to_json())
+    note2 = Note.from_dict(note.to_dict())
+    print(note)
+    print(note2)
