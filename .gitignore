@@ -3,9 +3,12 @@
 /Saves/__pycache__
 /__pycache__
 /.vscode
-/Saves/Notes/*
-/Saves/Notebooks/*
-/Saves/Entries/*
 /Saves/__pycache__
+
+# add these back in eventually
+# /Saves/Notes/*
+# /Saves/Notebooks/*
+# /Saves/Entries/*
+
 # I was using this file to test to see if SQL was usable
 databasetest.py
