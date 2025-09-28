@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 
 if __name__ == "__main__":
@@ -107,3 +107,9 @@ if __name__ == "__main__":
     save_object(Event(), True); save_object(ToDo(), True); save_object(PlannerEntry(), True)
     print(read_entries())
     '''
+    event1 = Event("First Event")
+    event2 = PlannerEntry("Second Planner Entry", occurance=datetime.today() + timedelta(1))
+    event3 = ToDo("Third ToDo", occurance=datetime.today() + timedelta(1))
+    event4 = Event("Fourth Event", color="#0000FF", occurance= datetime.today())
+
+    save_object(event1); save_object(event2); save_object(event3); save_object(event4)

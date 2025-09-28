@@ -36,6 +36,11 @@ class Event(PlannerEntry):
         days, seconds, microseconds = repeatTime.split("/")
         newEntry.repeatTime = timedelta(float(days), float(seconds), float(microseconds))
         return newEntry
+    
+    def check_and_fix_date(self):
+        while self.occurance - datetime.today() < timedelta(0):
+            if self.repeats:
+                self.occurance = self.occurance + self.repeatTime
 
 if __name__ == "__main__":
     event1 = Event("First event!")

@@ -15,9 +15,14 @@ from PlannerEntry import PlannerEntry
 from ToDo import ToDo
 from Notebook import Notebook
 from Note import Note
-from DataManager import save_object
+from DataManager import save_object, read_entries, read_notebooks, read_notes
 from EntryWidget import EntryWidget
 
+# list setup
+entryList = read_entries()
+entryList.sort()
+notebookList = read_notebooks()
+noteList = read_notes()
 
 
 root = ttk.Window(title="Notes App", themename="sandstone")
@@ -41,9 +46,6 @@ notebook.add(noteFrame, text="Notebook")
 upcomingFrameLabel = ttk.Label(upcomingFrame, text="Upcoming Events")
 upcomingFrameLabel.pack()
 
-eventFrame = EntryWidget(master=upcomingFrame, entry=Event())
-eventFrame.default_pack()
-
 # calendar frame
 calendarFrameLabel = ttk.Label(calendarFrame, text="Calendar of Events")
 calendarFrameLabel.pack()
@@ -61,6 +63,17 @@ def tab_changed(event : tk.Event):
     notebook : ttk.Notebook = event.widget
     selectedTabText = notebook.tab(notebook.select(), "text")
     print(selectedTabText)
+
+    # show upcoming events
+    if selectedTabText == "Upcoming":
+        display_entry_list()
+
+def display_entry_list():
+    global entryList
+    entryList.sort()
+    for entry in entryList:
+        eventFrame = EntryWidget(master=upcomingFrame, entry=entry)
+        eventFrame.default_pack()
 
 notebook.bind("<<NotebookTabChanged>>", tab_changed)
 
