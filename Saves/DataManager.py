@@ -52,6 +52,11 @@ def save_object(object : Note | Notebook | Event | PlannerEntry | ToDo, newFile 
     with open(savePath / saveFolderName / fileName, 'w') as file:
         json.dump(object.to_dict(), file, indent=3)
 
+# saves a list or tuple of objects.
+def save_objects(objectList : list[object : Note | Notebook | Event | PlannerEntry | ToDo], newFile : bool = False):
+    for object in objectList:
+        save_object(object=object, newFile=newFile)
+
 # reads all notes
 def read_notes() -> list[Note]:
     noteSavePath = savePath / "Notes"
@@ -107,9 +112,13 @@ if __name__ == "__main__":
     save_object(Event(), True); save_object(ToDo(), True); save_object(PlannerEntry(), True)
     print(read_entries())
     '''
+
+    # make some bogus events
     event1 = Event("First Event")
     event2 = PlannerEntry("Second Planner Entry", occurance=datetime.today() + timedelta(1))
     event3 = ToDo("Third ToDo", occurance=datetime.today() + timedelta(1))
     event4 = Event("Fourth Event", color="#0000FF", occurance= datetime.today())
 
-    save_object(event1); save_object(event2); save_object(event3); save_object(event4)
+    # save_object(event1); save_object(event2); save_object(event3); save_object(event4)
+
+    

@@ -3,6 +3,7 @@
 import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap import Frame
+from ttkbootstrap.dialogs import Messagebox
 import sys
 from pathlib import Path
 
@@ -24,13 +25,15 @@ class EntryWidget:
         self.frame.config(style=self.styleName)
 
         self.frame.columnconfigure(0, minsize=10)
-        self.frame.columnconfigure(4, minsize=10)
+        self.frame.columnconfigure(2, minsize=10)
+        self.frame.columnconfigure(6, weight=1)
 
         self.entryLabel = ttk.Label(self.frame, text=self.entry.name, background="white", padding=4)
-        self.entryLabel.grid(row=0, column=1, rowspan=1, columnspan=3)
+        self.entryLabel.grid(row=0, column=1)
+
+        # checkbox for ToDos
         self.checkbox = None
         self.completedVar = None
-
         if isinstance(self.entry, ToDo):
             self.completedVar = tk.BooleanVar(value=self.entry.completed)
 
@@ -38,7 +41,14 @@ class EntryWidget:
                 self.entry.completed = self.completedVar.get()
 
             self.checkbox = ttk.Checkbutton(self.frame, text="Completed", variable=self.completedVar, command=on_checkbox_toggle)
-            self.checkbox.grid(row=0, column=5, rowspan=1, columnspan=3)
+            self.checkbox.grid(row=0, column=3)
+
+        # delete button
+        def check_delete():
+            if Messagebox.yesno("Are you sure that you want to delete this entry?", "Delete Entry") == "Yes":
+                print("Deleting doesn't work yet")
+        self.deleteButton = ttk.Button(self.frame, text="🗑️", style="danger", command=check_delete)
+        self.deleteButton.grid(row=0, column=6, sticky="e")
         
     
     def default_pack(self):
