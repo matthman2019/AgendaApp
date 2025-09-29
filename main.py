@@ -5,8 +5,10 @@ from random import randint
 import sys
 import tkinter as tk
 import ttkbootstrap as ttk
-from ttkbootstrap import Label, Frame
-from ttkbootstrap import dialogs, scrolled
+from ttkbootstrap import Label, Frame, Button, Checkbutton
+from ttkbootstrap import dialogs, scrolled, widgets, colorutils
+from ttkbootstrap.dialogs import Messagebox
+from ttkbootstrap.dialogs.colorchooser import ColorChooserDialog
 from ttkbootstrap.constants import *
 
 sys.path.append("Classes")
@@ -54,7 +56,7 @@ calendarFrameLabel = Label(calendarFrame, text="Calendar of Events")
 calendarFrameLabel.pack()
 # new event frame
 newEventLabel = Label(newEventFrame, text="New Event")
-newEventLabel.pack()
+newEventLabel.grid(row=0, column=0, columnspan=2)
 # notebook frame
 notebookLabel = Label(noteFrame, text="Here is where you will be able to take notes")
 notebookLabel.pack()
@@ -67,18 +69,18 @@ def tab_changed(event : tk.Event):
 
     # show upcoming events
     if selectedTabText == "Upcoming":
-        display_entry_list()   
+        display_event_list()
 notebook.bind("<<NotebookTabChanged>>", tab_changed)
 
 # display entries in upcomingEventsFrame
-def display_entry_list():
+def display_event_list():
     global entryList
 
     # while this is defined in EntryWidget class, I'm going to override this method to make deleting work.
     def remove_from_entry_list(entry : EntryWidget):
         del entryList[entryList.index(entry.entry)]
         delete_object(entry.entry)
-        display_entry_list()
+        display_event_list()
     
     for widget in upcomingEventsFrame.winfo_children():
         widget.destroy()
@@ -91,13 +93,94 @@ def display_entry_list():
 # calendar tab (eventually)
 
 # new event tab
-nameLabel = Label(newEventFrame, text="Event Name")
+# row 1: name
+eventNameLabel = Label(newEventFrame, text="Event Name")
+eventNameLabel.grid(row=1, column=0)
+eventNameEntry = ttk.Entry(newEventFrame)
+eventNameEntry.grid(row=1, column=1)
+
+# row 2: event description
+eventDescriptionLabel = Label(newEventFrame, text="Description")
+eventDescriptionLabel.grid(row=2, column=0)
+eventDescriptionTextbox = scrolled.ScrolledText(newEventFrame, height=5, width=50)
+eventDescriptionTextbox.grid(row=2, column=1, sticky="WE")
+
+# row 3: occurance
+eventOccuranceLabel = Label(newEventFrame, text="Occurance")
+eventOccuranceLabel.grid(row=3, column=0)
+eventDateChooser = widgets.DateEntry(newEventFrame, popup_title="Choose Date")
+eventDateChooser["state"] = "normal"
+eventDateChooser.grid(row=3, column=1)
+
+# row 4: color
+newEventColor = 'FF0000'
+def chooseNewColor():
+    global newEventColor, eventColorButton
+    cd = ColorChooserDialog(root, "Choose a color for the new event")
+    cd.show()
+    newEventColor = cd.result.hex
+    print(newEventColor)
+    eventColorButtonStyle.configure("NewEventButton.TButton", background=newEventColor)
+eventColorLabel = Label(newEventFrame, text="Color")
+eventColorLabel.grid(row=4, column=0)
+eventColorButtonStyle = ttk.Style()
+eventColorButtonStyle.configure("NewEventButton.TButton", background=newEventColor)
+eventColorButton = Button(newEventFrame, text="Click me to select a color", command=chooseNewColor)
+eventColorButton.grid(row=4, column=1)
+
+# row 5: can be completed?
+eventCompletedLabel = Label(newEventFrame, text="Can this event be completed?")
+eventCompletedLabel.grid(row=5, column=0)
+eventCompletedBoolVar = tk.BooleanVar(newEventFrame, value=True)
+eventCompletedButton = Checkbutton(newEventFrame, bootstyle='round-toggle', variable=eventCompletedBoolVar)
+eventCompletedButton.grid(row=5, column=1)
+
+# row 6: make new event!
+def complete_new_event():
+    # name
+    eventName = eventNameEntry.get()
+    if eventName.strip(" ") == "":
+        Messagebox.show_error("You need to give your event a name!", "Could not make event", root, alert=False)
+        return
+    # description (can be none)
+    eventDescription = eventDescriptionTextbox.get("1.0", "end-1c")
+    # occurance
+    eventOccurance = eventDateChooser.get_date()
+    # color
+    eventColor = newEventColor
+    # if the event can be completed, make a ToDo
+    if eventCompletedBoolVar.get():
+        newEvent = ToDo(eventName, eventDescription, eventOccurance, eventColor, False)
+    
+    # otherwise, just make an Event
+    else:
+        newEvent = Event(eventName, eventDescription, eventOccurance, eventColor)
+    
+    entryList.append(newEvent)
+
+    eventNameEntry.delete(0, tk.END)
+    eventDescriptionTextbox.delete("1.0", tk.END)
+    # let's not reset color
+    # I can't reset date
+    eventCompletedBoolVar.set(True)
+
+    Messagebox.show_info("Success! Event created.", "Event created successfully", root)
+
+
+
+
+    
+        
+eventFinishButton = Button(newEventFrame, text="Complete Event!", command=complete_new_event)
+eventFinishButton.grid(row=6, column=0, columnspan=2, sticky="EW")
+
+
 
 
 
 # run tkinter and handle closing
 def on_close():
-    message = dialogs.Messagebox.yesno("Do you want to quit?", "Quit")
+    message = Messagebox.yesno("Do you want to quit?", "Quit")
     if message == "Yes":
         save_lists()
         root.destroy()
@@ -106,7 +189,7 @@ try:
     root.mainloop()
 except Exception as e:
     save_lists()
-    dialogs.Messagebox.show_error("AgendaApp had an error! Your data was saved. Please report this! \nError Callback: {e}", "Crash")
+    Messagebox.show_error("AgendaApp had an error! Your data was saved. Please report this! \nError Callback: {e}", "Crash")
 except KeyboardInterrupt:
     root.destroy()
     save_lists()

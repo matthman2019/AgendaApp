@@ -111,7 +111,8 @@ def delete_object(object : Note | Notebook | RepeatingEvent | Event | ToDo):
     fileName += '.json'
     
     filePath = savePath / saveFolderName / fileName
-    filePath.unlink()
+    if filePath.exists():
+        filePath.unlink()
         
 
 

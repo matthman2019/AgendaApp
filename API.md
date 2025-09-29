@@ -15,6 +15,9 @@ Attributes
 
 "occurance" is a weird name, but I can't use date or time for the attribute since that conflicts with the datetime module.
 
+Quick note - I used to call the Event class "PlannerEntry."
+If you see something in comments about an "entry" I'm probably talking about an Event.
+
 ## RepeatingEvent(Event)
 
 Event inherits from Event since it is an event.
