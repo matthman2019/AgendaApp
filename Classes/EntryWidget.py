@@ -4,6 +4,7 @@ import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap import Frame
 from ttkbootstrap.dialogs import Messagebox
+from typing import Callable
 import sys
 from pathlib import Path
 
@@ -34,6 +35,7 @@ class EntryWidget:
         # checkbox for ToDos
         self.checkbox = None
         self.completedVar = None
+        self.onDeleteCallback : Callable[[EntryWidget]] = None
         if isinstance(self.entry, ToDo):
             self.completedVar = tk.BooleanVar(value=self.entry.completed)
 
@@ -46,7 +48,7 @@ class EntryWidget:
         # delete button
         def check_delete():
             if Messagebox.yesno("Are you sure that you want to delete this entry?", "Delete Entry") == "Yes":
-                print("Deleting doesn't work yet")
+                self.onDeleteCallback(self)
         self.deleteButton = ttk.Button(self.frame, text="🗑️", style="danger", command=check_delete)
         self.deleteButton.grid(row=0, column=6, sticky="e")
         

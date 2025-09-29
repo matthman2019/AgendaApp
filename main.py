@@ -5,7 +5,7 @@ from random import randint
 import sys
 import tkinter as tk
 import ttkbootstrap as ttk
-from ttkbootstrap import dialogs
+from ttkbootstrap import dialogs, scrolled
 from ttkbootstrap.constants import *
 
 sys.path.append("Classes")
@@ -16,7 +16,7 @@ from PlannerEntry import PlannerEntry
 from ToDo import ToDo
 from Notebook import Notebook
 from Note import Note
-from DataManager import save_objects, read_entries, read_notebooks, read_notes
+from DataManager import save_objects, read_entries, read_notebooks, read_notes, delete_object
 from EntryWidget import EntryWidget
 
 # list setup
@@ -46,6 +46,8 @@ notebook.add(noteFrame, text="Notebook")
 # upcoming frame
 upcomingFrameLabel = ttk.Label(upcomingFrame, text="Upcoming Events")
 upcomingFrameLabel.pack()
+upcomingEventsFrame = scrolled.ScrolledFrame(upcomingFrame)
+upcomingEventsFrame.pack(expand=True, fill=BOTH)
 # calendar frame
 calendarFrameLabel = ttk.Label(calendarFrame, text="Calendar of Events")
 calendarFrameLabel.pack()
@@ -61,20 +63,31 @@ currentlyOpenTab = "Upcoming"
 def tab_changed(event : tk.Event):
     notebook : ttk.Notebook = event.widget
     selectedTabText = notebook.tab(notebook.select(), "text")
-    print(selectedTabText)
 
     # show upcoming events
     if selectedTabText == "Upcoming":
         display_entry_list()
+    
 notebook.bind("<<NotebookTabChanged>>", tab_changed)
 
-# display entries in upcomingFrame
+# display entries in upcomingEventsFrame
 def display_entry_list():
     global entryList
+
+    # while this is defined in EntryWidget class, I'm going to override this method to make deleting work.
+    def remove_from_entry_list(entry : EntryWidget):
+        del entryList[entryList.index(entry.entry)]
+        delete_object(entry.entry)
+        display_entry_list()
+        
+
+    for widget in upcomingEventsFrame.winfo_children():
+        widget.destroy()
     entryList.sort()
     for entry in entryList:
-        eventFrame = EntryWidget(master=upcomingFrame, entry=entry)
+        eventFrame = EntryWidget(master=upcomingEventsFrame, entry=entry)
         eventFrame.default_pack()
+        eventFrame.onDeleteCallback = remove_from_entry_list
 
 # calendar tab (eventually)
 

@@ -95,6 +95,25 @@ def read_entries() -> list[PlannerEntry | Event | ToDo]:
             returnList.append(entry)
     return returnList
 
+def delete_object(object : Note | Notebook | Event | PlannerEntry | ToDo):
+    saveFolderName = ''
+    
+    if isinstance(object, Note):
+        saveFolderName = "Notes"
+        fileName = object.title
+    elif isinstance(object, Notebook):
+        saveFolderName = "Notebooks"
+        fileName = object.title
+    elif isinstance(object, (Event, PlannerEntry, ToDo)):
+        saveFolderName = "Entries"
+        fileName = object.name
+    
+    fileName += '.json'
+    
+    filePath = savePath / saveFolderName / fileName
+    filePath.unlink()
+        
+
 
 if __name__ == "__main__":
     '''
@@ -121,4 +140,6 @@ if __name__ == "__main__":
 
     # save_object(event1); save_object(event2); save_object(event3); save_object(event4)
 
-    
+    for i in range(16):
+        event = ToDo(f"Event {str(i)}", "This is stupid", datetime.today() + timedelta(i), f"#FF00{(i*16 + i):X}")
+        save_object(event)
