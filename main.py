@@ -5,14 +5,15 @@ from random import randint
 import sys
 import tkinter as tk
 import ttkbootstrap as ttk
+from ttkbootstrap import Label, Frame
 from ttkbootstrap import dialogs, scrolled
 from ttkbootstrap.constants import *
 
 sys.path.append("Classes")
 sys.path.append("Saves")
 
+from RepeatingEvent import RepeatingEvent
 from Event import Event
-from PlannerEntry import PlannerEntry
 from ToDo import ToDo
 from Notebook import Notebook
 from Note import Note
@@ -26,36 +27,36 @@ notebookList = read_notebooks()
 noteList = read_notes()
 
 def save_lists():
+    global entryList, notebookLabel, noteList
     save_objects(entryList); save_objects(notebookList); save_objects(noteList)
-
 
 root = ttk.Window(title="Notes App", themename="sandstone")
 root.geometry("800x800")
 notebook = ttk.Notebook(root, style="sandstone")
 notebook.pack(fill=BOTH, expand=True)
 
-upcomingFrame = ttk.Frame(notebook)
-calendarFrame = ttk.Frame(notebook)
-newEventFrame = ttk.Frame(notebook)
-noteFrame = ttk.Frame(notebook)
+upcomingFrame = Frame(notebook)
+calendarFrame = Frame(notebook)
+newEventFrame = Frame(notebook)
+noteFrame = Frame(notebook)
 notebook.add(upcomingFrame, text="Upcoming")
 notebook.add(calendarFrame, text="Calendar")
 notebook.add(newEventFrame, text="New Event")
 notebook.add(noteFrame, text="Notebook")
 
 # upcoming frame
-upcomingFrameLabel = ttk.Label(upcomingFrame, text="Upcoming Events")
+upcomingFrameLabel = Label(upcomingFrame, text="Upcoming Events")
 upcomingFrameLabel.pack()
 upcomingEventsFrame = scrolled.ScrolledFrame(upcomingFrame)
 upcomingEventsFrame.pack(expand=True, fill=BOTH)
 # calendar frame
-calendarFrameLabel = ttk.Label(calendarFrame, text="Calendar of Events")
+calendarFrameLabel = Label(calendarFrame, text="Calendar of Events")
 calendarFrameLabel.pack()
 # new event frame
-newEventLabel = ttk.Label(newEventFrame, text="Here is will you will make new events.")
+newEventLabel = Label(newEventFrame, text="New Event")
 newEventLabel.pack()
 # notebook frame
-notebookLabel = ttk.Label(noteFrame, text="Here is where you will be able to take notes")
+notebookLabel = Label(noteFrame, text="Here is where you will be able to take notes")
 notebookLabel.pack()
 
 # handle notebook tab changes
@@ -66,8 +67,7 @@ def tab_changed(event : tk.Event):
 
     # show upcoming events
     if selectedTabText == "Upcoming":
-        display_entry_list()
-    
+        display_entry_list()   
 notebook.bind("<<NotebookTabChanged>>", tab_changed)
 
 # display entries in upcomingEventsFrame
@@ -79,8 +79,7 @@ def display_entry_list():
         del entryList[entryList.index(entry.entry)]
         delete_object(entry.entry)
         display_entry_list()
-        
-
+    
     for widget in upcomingEventsFrame.winfo_children():
         widget.destroy()
     entryList.sort()
@@ -92,7 +91,7 @@ def display_entry_list():
 # calendar tab (eventually)
 
 # new event tab
-
+nameLabel = Label(newEventFrame, text="Event Name")
 
 
 

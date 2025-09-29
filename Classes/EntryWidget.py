@@ -8,14 +8,14 @@ from typing import Callable
 import sys
 from pathlib import Path
 
-from Event import Event
+from RepeatingEvent import RepeatingEvent
 from ToDo import ToDo
-from PlannerEntry import PlannerEntry
+from Event import Event
 
 class EntryWidget:
-    def __init__(self, master = None, entry : Event | ToDo | PlannerEntry = None):
+    def __init__(self, master = None, entry : RepeatingEvent | ToDo | Event = None):
         if entry is None:
-            entry = PlannerEntry(color="#FF0000")
+            entry = Event(color="#FF0000")
         self.entry = entry
 
         self.frame = ttk.Frame(master, padding=4)

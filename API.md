@@ -1,10 +1,10 @@
 # API
 
-## PlannerEntry
+## Event
 
-PlannerEntry is a class that stores an entry in a planner. It just is - it can't be checked off.
+Event is a class that stores an event in a planner. It just is - it can't be checked off.
 It doesn't repeat, it's just a one-time thing.
-Do note that you can use greater than, less than, etc. on PlannerEntrys. They compare their occurance in time.
+Do note that you can use greater than, less than, etc. on Events. They compare their occurance in time.
 So if event2 happens after event1, event2 > event1.
 
 Attributes
@@ -15,13 +15,17 @@ Attributes
 
 "occurance" is a weird name, but I can't use date or time for the attribute since that conflicts with the datetime module.
 
-## Event(PlannerEntry)
+## RepeatingEvent(Event)
 
-Event inherits from PlannerEntry since it is an entry
+Event inherits from Event since it is an event.
+It can repeat. Booyah.
 
-## ToDo(PlannerEntry)
+- repeats : bool = whether the event repeats or not
+- repeatTime : timedelta = the time between repeats (i.e. one week, one month, one year, etc)
 
-ToDo is a class that inherits PlannerEntry. It is an entry, but unlike an entry, it CAN be checked off - like a todo in a schedule!
+## ToDo(Event)
+
+ToDo is a class that inherits Event. It is an event, but unlike an event, it CAN be checked off - like a todo in a schedule!
 It does not repeat though.
 
 Attributes

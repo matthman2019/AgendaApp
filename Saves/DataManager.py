@@ -6,10 +6,10 @@ import json
 if __name__ == "__main__":
     sys.path.append(str(Path(__file__).parent.parent / "Classes"))
 
-from Event import Event
+from RepeatingEvent import RepeatingEvent
 from Note import Note
 from Notebook import Notebook
-from PlannerEntry import PlannerEntry
+from Event import Event
 from ToDo import ToDo
 
 savePath = Path(__file__).parent
@@ -30,7 +30,7 @@ def _get_safe_name(originalString : str, folder : Path, jsonMode = False) -> str
 # saves a note!
 # if newFile, a new .json file will always be created.
 # otherwise, save_note can overwrite notes with the same title.
-def save_object(object : Note | Notebook | Event | PlannerEntry | ToDo, newFile : bool = False) -> None:
+def save_object(object : Note | Notebook | RepeatingEvent | Event | ToDo, newFile : bool = False) -> None:
     saveFolderName = ''
     
     if isinstance(object, Note):
@@ -39,7 +39,7 @@ def save_object(object : Note | Notebook | Event | PlannerEntry | ToDo, newFile 
     elif isinstance(object, Notebook):
         saveFolderName = "Notebooks"
         fileName = object.title
-    elif isinstance(object, (Event, PlannerEntry, ToDo)):
+    elif isinstance(object, (RepeatingEvent, Event, ToDo)):
         saveFolderName = "Entries"
         fileName = object.name
     
@@ -53,7 +53,7 @@ def save_object(object : Note | Notebook | Event | PlannerEntry | ToDo, newFile 
         json.dump(object.to_dict(), file, indent=3)
 
 # saves a list or tuple of objects.
-def save_objects(objectList : list[object : Note | Notebook | Event | PlannerEntry | ToDo], newFile : bool = False):
+def save_objects(objectList : list[object : Note | Notebook | RepeatingEvent | Event | ToDo], newFile : bool = False):
     for object in objectList:
         save_object(object=object, newFile=newFile)
 
@@ -77,7 +77,7 @@ def read_notebooks() -> list[Notebook]:
     return returnList
 
 # slightly more complicated. This one tests the attributes in the dictionary to figure out what class / subclass this Entry is.
-def read_entries() -> list[PlannerEntry | Event | ToDo]:
+def read_entries() -> list[Event | RepeatingEvent | ToDo]:
     specificSavePath = savePath / "Entries"
     returnList = []
     for jsonPath in specificSavePath.iterdir():
@@ -86,16 +86,16 @@ def read_entries() -> list[PlannerEntry | Event | ToDo]:
 
             # test keys and figure out class
             if dictionary.__contains__("repeats"):
-                entry = Event.from_dict(dictionary)
+                entry = RepeatingEvent.from_dict(dictionary)
             elif dictionary.__contains__("completed"):
                 entry = ToDo.from_dict(dictionary)
             else:
-                entry = PlannerEntry.from_dict(dictionary)
+                entry = Event.from_dict(dictionary)
 
             returnList.append(entry)
     return returnList
 
-def delete_object(object : Note | Notebook | Event | PlannerEntry | ToDo):
+def delete_object(object : Note | Notebook | RepeatingEvent | Event | ToDo):
     saveFolderName = ''
     
     if isinstance(object, Note):
@@ -104,7 +104,7 @@ def delete_object(object : Note | Notebook | Event | PlannerEntry | ToDo):
     elif isinstance(object, Notebook):
         saveFolderName = "Notebooks"
         fileName = object.title
-    elif isinstance(object, (Event, PlannerEntry, ToDo)):
+    elif isinstance(object, (RepeatingEvent, Event, ToDo)):
         saveFolderName = "Entries"
         fileName = object.name
     
@@ -128,15 +128,15 @@ if __name__ == "__main__":
     print(read_notebooks())
     '''
     '''
-    save_object(Event(), True); save_object(ToDo(), True); save_object(PlannerEntry(), True)
+    save_object(RepeatingEvent(), True); save_object(ToDo(), True); save_object(Event(), True)
     print(read_entries())
     '''
 
-    # make some bogus events
-    event1 = Event("First Event")
-    event2 = PlannerEntry("Second Planner Entry", occurance=datetime.today() + timedelta(1))
+    # make some bogus RepeatingEvents
+    event1 = RepeatingEvent("First Event")
+    event2 = Event("Second Planner Entry", occurance=datetime.today() + timedelta(1))
     event3 = ToDo("Third ToDo", occurance=datetime.today() + timedelta(1))
-    event4 = Event("Fourth Event", color="#0000FF", occurance= datetime.today())
+    event4 = RepeatingEvent("Fourth Event", color="#0000FF", occurance= datetime.today())
 
     # save_object(event1); save_object(event2); save_object(event3); save_object(event4)
 

@@ -1,11 +1,11 @@
 # ToDo is like a PlannerEntry (see PlannerEntry.py), but it has a new property: completed!
 # this boolean signifies if it has been completed or not.
 
-from PlannerEntry import PlannerEntry
+from Event import Event
 from datetime import datetime, timedelta
 from calendar import isleap
 
-class ToDo(PlannerEntry):
+class ToDo(Event):
     def __init__(self, 
                 name : str = "Untitled Entry", 
                 description : str = "This entry has no description yet!",
