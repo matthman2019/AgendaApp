@@ -3,6 +3,7 @@
 import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap import Frame
+from ttkbootstrap.tooltip import ToolTip
 from ttkbootstrap.dialogs import Messagebox
 from typing import Callable
 import sys
@@ -31,6 +32,8 @@ class EntryWidget:
 
         self.entryLabel = ttk.Label(self.frame, text=self.entry.name, background="white", padding=4)
         self.entryLabel.grid(row=0, column=1)
+
+        self.tooltip = ToolTip(self.frame, text=self.entry.description)
 
         # checkbox for ToDos
         self.checkbox = None
