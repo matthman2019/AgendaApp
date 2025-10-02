@@ -13,7 +13,8 @@ class Notebook:
         while title in titlesUsed:
             title += "2"
         self.title = title
-        self.notes = []
+        self.notes : list[Note] = []
+        self.iid = None # this is used with tkinter
     
     def __str__(self):
         return f"Notebook: {self.title}"
@@ -38,7 +39,7 @@ class Notebook:
             value = getattr(self, attributeName)
             
             # making sure that attribut
-            if attributeName == "notes":
+            if attributeName == "notes" or attributeName == "iid":
                 continue
             my_dict[attributeName] = value
         return my_dict

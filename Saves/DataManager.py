@@ -132,7 +132,7 @@ if __name__ == "__main__":
     save_object(RepeatingEvent(), True); save_object(ToDo(), True); save_object(Event(), True)
     print(read_entries())
     '''
-
+    '''
     # make some bogus RepeatingEvents
     event1 = RepeatingEvent("First Event")
     event2 = Event("Second Planner Entry", occurance=datetime.today() + timedelta(1))
@@ -144,3 +144,8 @@ if __name__ == "__main__":
     for i in range(16):
         event = ToDo(f"Event {str(i)}", "This is stupid", datetime.today() + timedelta(i), f"#FF00{(i*16 + i):X}")
         save_object(event)
+    '''
+    notebook = Notebook("YoMomma")
+    save_object(notebook)
+    note1 = Note(body="He he ha ha")
+    save_object(note1)

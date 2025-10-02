@@ -10,6 +10,7 @@ class Note:
     lastedit : datetime = datetime.today()
     body : str = ""
     notebook : str | None = None
+    iid = None # tkinter uses this
 
     def to_dict(self):
         my_dict = {}
