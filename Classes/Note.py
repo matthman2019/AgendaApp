@@ -19,6 +19,9 @@ class Note:
             # don't put dunder methods or dunder attributes in the dictionary
             if attributeName.endswith("__"):
                 continue
+
+            if attributeName == "iid":
+                continue
             
             # don't put methods in the dictionary
             attribute = getattr(self, attributeName)

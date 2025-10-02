@@ -92,11 +92,14 @@ notebookLabel.grid(row=0, column=0, columnspan=1)
 # handle notebook tab changes
 currentlyOpenTab = "Upcoming"
 def tab_changed(event : tk.Event):
+    global currentlyOpenTab
+    if currentlyOpenTab == "Notebook":
+        save_note()
     notebook : ttk.Notebook = event.widget
-    selectedTabText = notebook.tab(notebook.select(), "text")
+    currentlyOpenTab = notebook.tab(notebook.select(), "text")
 
     # show upcoming events
-    if selectedTabText == "Upcoming":
+    if currentlyOpenTab == "Upcoming":
         display_event_list()
 rootNotebook.bind("<<NotebookTabChanged>>", tab_changed)
 
@@ -211,7 +214,7 @@ def refresh_notebook_treeview():
 refresh_notebook_treeview()
 notebookView.grid(row=1, column=0, sticky=NS)
 
-noteScrolledtext = scrolled.ScrolledText(noteFrame, autohide=True)
+noteScrolledtext = scrolled.ScrolledText(noteFrame, autohide=True, width=50)
 noteScrolledtext.grid(row=1, column=1)
 
 def set_scrolled_text(text : str):
@@ -219,19 +222,31 @@ def set_scrolled_text(text : str):
     noteScrolledtext.insert("1.0", text)
 
 selectedObject : Notebook | Note = None
+
+def save_note():
+    if currentlyOpenTab != "Notebook":
+        return
+    if isinstance(selectedObject, Note):
+        selectedObject.body = noteScrolledtext.get("1.0", END)
+        selectedObject.lastedit = datetime.datetime.today()
+
 def load_note(event : tk.Event):
     global selectedObject
     # first save current note
-    if isinstance(selectedObject, Note):
-        selectedObject.body = noteScrolledtext.get("1.0", END)
-
-    selectedIID = notebookView.selection()[0]
+    save_note()
+    try:
+        selectedIID = notebookView.selection()[0]
+    except IndexError:
+        set_scrolled_text("")
+        return
     selectedItem = notebookView.item(selectedIID)
     for notebook in notebookList:
         if notebook.iid != selectedIID:
             continue
         selectedObject = notebook
-        set_scrolled_text("This is a notebook!")
+        set_scrolled_text("This is a notebook!\nTry selecting a note. " \
+        "If you can't see any notes, click the plus sign to the left of this notebook's name." \
+        "\nModifying this text will not break anything.")
         return
     for note in noteList:
         if note.iid != selectedIID:
@@ -242,24 +257,118 @@ def load_note(event : tk.Event):
     selectedObject = None
     raise Warning(f"No notebook or note found with iid {selectedIID}!")
 
-            
 notebookView.bind("<<TreeviewSelect>>", load_note)
+
+# new note and notebook creation
+newNotebookButton = Button(noteFrame, text="Make a New Notebook")
+newNotebookButton.grid(row=2, column=0)
+newNoteButton = Button(noteFrame, text="Make a New Note")
+newNoteButton.grid(row=2, column=1)
+
+# functionality for the new notebook button
+def make_new_notebook():
+    newNotebookRoot = ttk.Toplevel(title="New Notebook")
+    
+    notebookTitleLabel = Label(newNotebookRoot, text="What will the title of this notebook be?")
+    notebookTitleLabel.grid(row=0, column=0, columnspan=2)
+    notebookTitleEntry = ttk.Entry(newNotebookRoot)
+    notebookTitleEntry.grid(row=1, column=0, columnspan=2)
+    notebookTitleCreateButton = Button(newNotebookRoot, text="Create", style=SUCCESS)
+    notebookTitleCreateButton.grid(row=2, column=0)
+    notebookTitleCancelButton = Button(newNotebookRoot, text="Cancel", style=DANGER)
+    notebookTitleCancelButton.grid(row=2, column=1)
+
+    def fail_creation():
+        newNotebookRoot.destroy()
+    notebookTitleCancelButton.config(command=fail_creation)
+    newNotebookRoot.protocol("WM_DELETE_WINDOW", fail_creation)
+
+    def successful_creation():
+        global notebookList
+        enteredText = notebookTitleEntry.get()
+        if enteredText.strip(" ") == "":
+            Messagebox.show_error("You must enter a name for the notebook!", "No Notebook Name", newNotebookRoot)
+            return
+        newNotebook = Notebook(enteredText)
+        notebookList.append(newNotebook)
+        refresh_notebook_treeview()
+        newNotebookRoot.destroy()
+    notebookTitleCreateButton.config(command=successful_creation)
+
+    newNotebookRoot.mainloop()
+newNotebookButton.config(command=make_new_notebook)
+
+# functionality for the new note button
+def make_new_note():
+    try:
+        selectedItemIID = notebookView.selection()[0]
+    except IndexError:
+        Messagebox.show_info("You need to select a notebook in the " \
+                             "notebook tree that this note will be inside of!", "No notebook selected", root)
+        return
+    targetNotebook = None
+    for notebook in notebookList:
+        if notebook.iid == selectedItemIID:
+            targetNotebook = notebook
+            break
+    
+    if targetNotebook == None:
+        Messagebox.show_info("You need to select a notebook in the " \
+                             "notebook tree that this note will be inside of!", "No notebook selected", root)
+        return
+    
+    newNoteRoot = ttk.Toplevel(title="New Note")
+    
+    noteTitleLabel = Label(newNoteRoot, text="What will the title of this note be?")
+    noteTitleLabel.grid(row=0, column=0, columnspan=2)
+    noteTitleEntry = ttk.Entry(newNoteRoot)
+    noteTitleEntry.grid(row=1, column=0, columnspan=2)
+    targetNotebookLabel = Label(newNoteRoot, text=f'This note will be put in the notebook titled "{targetNotebook.title}."')
+    targetNotebookLabel.grid(row=2, column=0, columnspan=2)
+    noteTitleCreateButton = Button(newNoteRoot, text="Create", style=SUCCESS)
+    noteTitleCreateButton.grid(row=3, column=0)
+    noteTitleCancelButton = Button(newNoteRoot, text="Cancel", style=DANGER)
+    noteTitleCancelButton.grid(row=3, column=1)
+
+    def fail_creation():
+        newNoteRoot.destroy()
+    noteTitleCancelButton.config(command=fail_creation)
+    newNoteRoot.protocol("WM_DELETE_WINDOW", fail_creation)
+
+    def successful_creation():
+        global notebookList
+        enteredText = noteTitleEntry.get()
+        if enteredText.strip(" ") == "":
+            Messagebox.show_error("You must enter a name for the note!", "No Note Name", newNoteRoot)
+            return
+        newNote = Note(enteredText, notebook=targetNotebook.title)
+        noteList.append(newNote)
+        refresh_notebook_treeview()
+        newNoteRoot.destroy()
+    noteTitleCreateButton.config(command=successful_creation)
+
+    newNoteRoot.mainloop()
+
+newNoteButton.config(command=make_new_note)
 
 
 # run tkinter and handle closing
 def on_close():
     message = Messagebox.yesno("Do you want to quit?", "Quit")
     if message == "Yes":
+        save_note()
         save_lists()
         root.destroy()
 root.protocol("WM_DELETE_WINDOW", on_close)
 try:
     root.mainloop()
 except Exception as e:
+    save_note()
     save_lists()
     Messagebox.show_error("AgendaApp had an error! Your data was saved. Please report this! \nError Callback: {e}", "Crash")
 except KeyboardInterrupt:
     root.destroy()
+    save_note()
     save_lists()
     print("\nData saved successfully.")
 finally:

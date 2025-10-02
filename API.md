@@ -48,7 +48,7 @@ Attributes
 - title : str = the title of the note
 - lastEdit : datetime.datetime = the last time the note was saved
 - body : str = the contents of the note
-- notebook : int | None = the ID of the notebook that this note belongs to. Can be None.
+- notebook : str | None = the ID of the notebook that this note belongs to. Can be None.
 
 ## Notebook
 

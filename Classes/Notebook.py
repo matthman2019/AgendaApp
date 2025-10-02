@@ -30,6 +30,9 @@ class Notebook:
             # don't put dunder methods or dunder attributes in the dictionary
             if attributeName.endswith("__"):
                 continue
+            # making sure that attribute name is not an attribute that doesn't need to be saved
+            if attributeName == "notes" or attributeName == "iid":
+                continue
             
             # don't put methods in the dictionary
             attribute = getattr(self, attributeName)
@@ -37,10 +40,6 @@ class Notebook:
                 continue
 
             value = getattr(self, attributeName)
-            
-            # making sure that attribut
-            if attributeName == "notes" or attributeName == "iid":
-                continue
             my_dict[attributeName] = value
         return my_dict
     
