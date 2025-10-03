@@ -75,6 +75,8 @@ def read_notes() -> tuple[list[Note], list[Path]]:
 
     noteSavePath = savePath / "Notes"
     noteList = []
+    if not noteSavePath.exists():
+        noteSavePath.mkdir()
     for noteJsonPath in noteSavePath.iterdir():
         with open(noteJsonPath, 'r') as noteJson:
             try:
@@ -89,6 +91,8 @@ def read_notebooks() -> tuple[list[Notebook], list[Path]]:
     badFileList = []
     specificSavePath = savePath / "Notebooks"
     returnList = []
+    if not specificSavePath.exists():
+        specificSavePath.mkdir()
     for jsonPath in specificSavePath.iterdir():
         with open(jsonPath, 'r') as jsonFile:
             try:
@@ -104,6 +108,8 @@ def read_events() -> tuple[list[Event | RepeatingEvent | ToDo], list[Path]]:
     badFileList = []
 
     specificSavePath = savePath / "Events"
+    if not specificSavePath.exists():
+        specificSavePath.mkdir()
     returnList = []
     for jsonPath in specificSavePath.iterdir():
         with open(jsonPath, 'r') as jsonFile:
