@@ -70,11 +70,11 @@ rootNotebook.pack(fill=BOTH, expand=True)
 
 # rootNotebook frame setup
 upcomingFrame = Frame(rootNotebook)
-calendarFrame = Frame(rootNotebook)
+# calendarFrame = Frame(rootNotebook)
 newEventFrame = Frame(rootNotebook)
 noteFrame = Frame(rootNotebook)
 rootNotebook.add(upcomingFrame, text="Upcoming")
-rootNotebook.add(calendarFrame, text="Calendar")
+# rootNotebook.add(calendarFrame, text="Calendar")
 rootNotebook.add(newEventFrame, text="New Event")
 rootNotebook.add(noteFrame, text="Notebook")
 
@@ -122,8 +122,8 @@ def display_event_list():
 
 # calendar tab (eventually)
 
-calendarFrameLabel = Label(calendarFrame, text="Calendar of Events")
-calendarFrameLabel.pack()
+# calendarFrameLabel = Label(calendarFrame, text="Calendar of Events")
+# calendarFrameLabel.pack()
 
 
 
