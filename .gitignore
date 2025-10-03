@@ -5,8 +5,7 @@
 /.vscode
 /Saves/__pycache__
 
-# add these back in eventually
-# /Saves/Notes/*
-# /Saves/Notebooks/*
-# /Saves/Entries/*
+/Saves/Notes/*
+/Saves/Notebooks/*
+/Saves/Entries/*
 
