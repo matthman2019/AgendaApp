@@ -239,7 +239,6 @@ def load_note(event : tk.Event):
     except IndexError:
         set_scrolled_text("")
         return
-    selectedItem = notebookView.item(selectedIID)
     for notebook in notebookList:
         if notebook.iid != selectedIID:
             continue
@@ -264,6 +263,10 @@ newNotebookButton = Button(noteFrame, text="Make a New Notebook")
 newNotebookButton.grid(row=2, column=0)
 newNoteButton = Button(noteFrame, text="Make a New Note")
 newNoteButton.grid(row=2, column=1)
+deleteNotebookButton = Button(noteFrame, text="Delete Notebook", style=DANGER)
+deleteNotebookButton.grid(row=3, column=0)
+deleteNoteButton = Button(noteFrame, text="Delete Note", style=DANGER)
+deleteNoteButton.grid(row=3, column=1)
 
 # functionality for the new notebook button
 def make_new_notebook():
