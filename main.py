@@ -19,15 +19,17 @@ from Event import Event
 from ToDo import ToDo
 from Notebook import Notebook
 from Note import Note
-from DataManager import save_objects, read_entries, read_notebooks, read_notes, delete_object
+from DataManager import save_objects, read_events, read_notebooks, read_notes, delete_object, read_aloud_bad_files
 from EntryWidget import EntryWidget
 
 # list setup
-entryList = read_entries()
-entryList.sort()
-notebookList = read_notebooks()
-noteList = read_notes()
+eventList, badEvents = read_events()
+eventList.sort()
+notebookList, badNotebooks = read_notebooks()
+noteList, badNotes = read_notes()
+badJsonPaths = badEvents + badNotebooks + badNotes
 
+# runs through notebookList and finds notebook with a title of title
 def get_notebook_by_title(title:str) -> Notebook:
     for notebook in notebookList:
         if notebook.title == title:
@@ -55,16 +57,18 @@ def refresh_notebook_notes():
             localNotebook.notes.append(note)
 refresh_notebook_notes()
     
-
+# saves eventList, notebookList, and noteList to the hard drive
 def save_lists():
-    global entryList, notebookLabel, noteList
-    save_objects(entryList); save_objects(notebookList); save_objects(noteList)
+    global eventList, notebookList, noteList
+    save_objects(eventList); save_objects(notebookList); save_objects(noteList)
 
+# tkinter setup
 root = ttk.Window(title="Notes App", themename="sandstone")
 root.geometry("800x800")
 rootNotebook = ttk.Notebook(root, style="sandstone")
 rootNotebook.pack(fill=BOTH, expand=True)
 
+# rootNotebook frame setup
 upcomingFrame = Frame(rootNotebook)
 calendarFrame = Frame(rootNotebook)
 newEventFrame = Frame(rootNotebook)
@@ -74,20 +78,6 @@ rootNotebook.add(calendarFrame, text="Calendar")
 rootNotebook.add(newEventFrame, text="New Event")
 rootNotebook.add(noteFrame, text="Notebook")
 
-# upcoming frame
-upcomingFrameLabel = Label(upcomingFrame, text="Upcoming Events")
-upcomingFrameLabel.pack()
-upcomingEventsFrame = scrolled.ScrolledFrame(upcomingFrame, autohide=True)
-upcomingEventsFrame.pack(expand=True, fill=BOTH)
-# calendar frame
-calendarFrameLabel = Label(calendarFrame, text="Calendar of Events")
-calendarFrameLabel.pack()
-# new event frame
-newEventLabel = Label(newEventFrame, text="New Event")
-newEventLabel.grid(row=0, column=0, columnspan=2)
-# notebook frame
-notebookLabel = Label(noteFrame, text="Notes")
-notebookLabel.grid(row=0, column=0, columnspan=1)
 
 # handle notebook tab changes
 currentlyOpenTab = "Upcoming"
@@ -103,27 +93,44 @@ def tab_changed(event : tk.Event):
         display_event_list()
 rootNotebook.bind("<<NotebookTabChanged>>", tab_changed)
 
+# upcoming frame
+
+upcomingFrameLabel = Label(upcomingFrame, text="Upcoming Events")
+upcomingFrameLabel.pack()
+upcomingEventsFrame = scrolled.ScrolledFrame(upcomingFrame, autohide=True)
+upcomingEventsFrame.pack(expand=True, fill=BOTH)
+
 # display entries in upcomingEventsFrame
 def display_event_list():
-    global entryList
+    global eventList
 
     # while this is defined in EntryWidget class, I'm going to override this method to make deleting work.
     def remove_from_entry_list(entry : EntryWidget):
-        del entryList[entryList.index(entry.entry)]
+        del eventList[eventList.index(entry.entry)]
         delete_object(entry.entry)
         display_event_list()
     
     for widget in upcomingEventsFrame.winfo_children():
         widget.destroy()
-    entryList.sort()
-    for entry in entryList:
+    eventList.sort()
+    for entry in eventList:
         eventFrame = EntryWidget(master=upcomingEventsFrame, entry=entry)
         eventFrame.default_pack()
         eventFrame.onDeleteCallback = remove_from_entry_list
 
+
+
 # calendar tab (eventually)
 
+calendarFrameLabel = Label(calendarFrame, text="Calendar of Events")
+calendarFrameLabel.pack()
+
+
+
 # new event tab
+newEventLabel = Label(newEventFrame, text="New Event")
+newEventLabel.grid(row=0, column=0, columnspan=2)
+
 # row 1: name
 eventNameLabel = Label(newEventFrame, text="Event Name")
 eventNameLabel.grid(row=1, column=0)
@@ -136,12 +143,28 @@ eventDescriptionLabel.grid(row=2, column=0)
 eventDescriptionTextbox = scrolled.ScrolledText(newEventFrame, height=5, width=50, autohide=True)
 eventDescriptionTextbox.grid(row=2, column=1, sticky="WE")
 
+userSelectedDate = datetime.datetime.today()
 # row 3: occurance
 eventOccuranceLabel = Label(newEventFrame, text="Occurance")
 eventOccuranceLabel.grid(row=3, column=0)
-eventDateChooser = widgets.DateEntry(newEventFrame, popup_title="Choose Date")
-eventDateChooser["state"] = "normal"
-eventDateChooser.grid(row=3, column=1)
+# eventDateChooser = widgets.DateEntry(newEventFrame)
+# eventDateChooser.grid(row=3, column=1)
+eventDateButton = Button(newEventFrame, text="Click on me to choose a date", command=lambda: dialogs.DatePickerDialog(root))
+eventDateButton.grid(row=3, column=1)
+
+timesClicked = 0
+userSelectedDate = datetime.datetime.today()
+def ask_date_with_dialog():
+    global userSelectedDate, timesClicked
+    if timesClicked == 0:
+        Messagebox.show_info("The window that should pop up to ask you the date generally doesn't work first try. "\
+                             "It's a very annoying bug, completely out of my control, and I can't fix it. "\
+                             "If the date picking window does not show up on your first attempt, try clicking the button again. "\
+                             "If that doesn't work after a few tries, restart the program. If none of that worked, you're out of luck. Sorry!")
+    date = dialogs.DatePickerDialog(root)
+    userSelectedDate = datetime.datetime.combine(date.date_selected, datetime.time(23, 59, 59, 0))
+    timesClicked += 1
+eventDateButton.config(command=ask_date_with_dialog)
 
 # row 4: color
 newEventColor = 'FF0000'
@@ -150,7 +173,6 @@ def chooseNewColor():
     cd = ColorChooserDialog(root, "Choose a color for the new event")
     cd.show()
     newEventColor = cd.result.hex
-    print(newEventColor)
     eventColorButtonStyle.configure("NewEventButton.TButton", background=newEventColor)
 eventColorLabel = Label(newEventFrame, text="Color")
 eventColorLabel.grid(row=4, column=0)
@@ -168,15 +190,30 @@ eventCompletedButton.grid(row=5, column=1)
 
 # row 6: make new event!
 def complete_new_event():
+    global userSelectedDate
     # name
     eventName = eventNameEntry.get()
     if eventName.strip(" ") == "":
         Messagebox.show_error("You need to give your event a name!", "Could not make event", root, alert=False)
         return
+    # make eventName unique (add a digit at the end if necessary)
+    originalEventName = eventName
+    eventNameUnique = False
+    numberAddingOn = 1
+    while not eventNameUnique:
+        eventNameUnique = True
+        for event in eventList:
+            if event.name == eventName:
+                eventNameUnique = False
+                numberAddingOn += 1
+                eventName = originalEventName + str(numberAddingOn)
+                break
+        
+        
     # description (can be none)
     eventDescription = eventDescriptionTextbox.get("1.0", "end-1c")
     # occurance
-    eventOccurance = eventDateChooser.get_date()
+    eventOccurance = userSelectedDate
     # color
     eventColor = newEventColor
     # if the event can be completed, make a ToDo
@@ -187,7 +224,7 @@ def complete_new_event():
     else:
         newEvent = Event(eventName, eventDescription, eventOccurance, eventColor)
     
-    entryList.append(newEvent)
+    eventList.append(newEvent)
 
     eventNameEntry.delete(0, tk.END)
     eventDescriptionTextbox.delete("1.0", tk.END)
@@ -200,7 +237,13 @@ def complete_new_event():
 eventFinishButton = Button(newEventFrame, text="Complete Event!", command=complete_new_event)
 eventFinishButton.grid(row=6, column=0, columnspan=2, sticky="EW")
 
+
+
 # notebook tab
+
+notebookLabel = Label(noteFrame, text="Notes")
+notebookLabel.grid(row=0, column=0, columnspan=1)
+
 notebookView = ttk.Treeview(noteFrame, selectmode=BROWSE)
 
 def refresh_notebook_treeview():
@@ -234,6 +277,7 @@ def load_note(event : tk.Event):
     global selectedObject
     # first save current note
     save_note()
+    # set selectedObject (the object of the item currently selected, which is a Note or Notebook)
     try:
         selectedIID = notebookView.selection()[0]
     except IndexError:
@@ -263,10 +307,8 @@ newNotebookButton = Button(noteFrame, text="Make a New Notebook")
 newNotebookButton.grid(row=2, column=0)
 newNoteButton = Button(noteFrame, text="Make a New Note")
 newNoteButton.grid(row=2, column=1)
-deleteNotebookButton = Button(noteFrame, text="Delete Notebook", style=DANGER)
-deleteNotebookButton.grid(row=3, column=0)
-deleteNoteButton = Button(noteFrame, text="Delete Note", style=DANGER)
-deleteNoteButton.grid(row=3, column=1)
+deleteSelectedButton = Button(noteFrame, text="Delete Selected Item", style=DANGER)
+deleteSelectedButton.grid(row=3, column=0)
 
 # functionality for the new notebook button
 def make_new_notebook():
@@ -289,9 +331,16 @@ def make_new_notebook():
     def successful_creation():
         global notebookList
         enteredText = notebookTitleEntry.get()
+        # check that the name exists and is not only spaces
         if enteredText.strip(" ") == "":
             Messagebox.show_error("You must enter a name for the notebook!", "No Notebook Name", newNotebookRoot)
             return
+        # check for name repeats
+        for notebook in notebookList:
+            if notebook.title == enteredText:
+                Messagebox.show_info("That name is already taken! No new notebook made.", "Used Notebook Name", newNotebookRoot)
+                return
+        # make new notebook
         newNotebook = Notebook(enteredText)
         notebookList.append(newNotebook)
         refresh_notebook_treeview()
@@ -303,22 +352,13 @@ newNotebookButton.config(command=make_new_notebook)
 
 # functionality for the new note button
 def make_new_note():
-    try:
-        selectedItemIID = notebookView.selection()[0]
-    except IndexError:
+    global selectedObject
+    if not isinstance(selectedObject, Notebook):
         Messagebox.show_info("You need to select a notebook in the " \
                              "notebook tree that this note will be inside of!", "No notebook selected", root)
         return
-    targetNotebook = None
-    for notebook in notebookList:
-        if notebook.iid == selectedItemIID:
-            targetNotebook = notebook
-            break
     
-    if targetNotebook == None:
-        Messagebox.show_info("You need to select a notebook in the " \
-                             "notebook tree that this note will be inside of!", "No notebook selected", root)
-        return
+    targetNotebook = selectedObject
     
     newNoteRoot = ttk.Toplevel(title="New Note")
     
@@ -344,6 +384,10 @@ def make_new_note():
         if enteredText.strip(" ") == "":
             Messagebox.show_error("You must enter a name for the note!", "No Note Name", newNoteRoot)
             return
+        for note in noteList:
+            if note.title == enteredText:
+                Messagebox.show_info("That name is already taken! No new note made.", "Used Note Name", newNoteRoot)
+                return
         newNote = Note(enteredText, notebook=targetNotebook.title)
         noteList.append(newNote)
         refresh_notebook_treeview()
@@ -353,6 +397,35 @@ def make_new_note():
     newNoteRoot.mainloop()
 
 newNoteButton.config(command=make_new_note)
+
+# functionality for delete selected item button
+def check_item_delete():
+    global selectedObject
+    if isinstance(selectedObject, Note):
+        confirmDelete = Messagebox.yesnocancel(f'Are you sure you want to delete the note titled {selectedObject.title}? This cannot be undone.', 
+                               "Confirm Delete", True, rootNotebook)
+        if confirmDelete == "Yes":
+            del noteList[noteList.index(selectedObject)]
+            refresh_notebook_treeview()
+            Messagebox.show_info("Note deleted successfully.", "Success", root)
+        else:
+            Messagebox.show_info("The note was not deleted.", "Not Deleted", root)
+    elif isinstance(selectedObject, Notebook):
+        if selectedObject.title == UNTITLED:
+            Messagebox.show_info("You can't delete the untitled notebook.", "You can't delete that", root)
+            return
+        confirmDelete = Messagebox.yesnocancel(f'Are you sure you want to delete the notebook titled {selectedObject.title}? ' \
+                                                'This cannot be undone. All notes inside the notebook will be put into the Untitled Notebook.', 
+                               "Confirm Delete", True, rootNotebook)
+        if confirmDelete == "Yes":
+            del notebookList[notebookList.index(selectedObject)]
+            refresh_notebook_treeview()
+            Messagebox.show_info("Notebook deleted successfully.", "Success", root)
+        else:
+            Messagebox.show_info("The notebook was not deleted.", "Not Deleted", root)
+    else:
+        Messagebox.show_info("Nothing was selected, so nothing was deleted.", "Not Deleted", root)
+deleteSelectedButton.config(command=check_item_delete)
 
 
 # run tkinter and handle closing
@@ -364,6 +437,9 @@ def on_close():
         root.destroy()
 root.protocol("WM_DELETE_WINDOW", on_close)
 try:
+    # first, set up showing bad files (just in case we need to)
+    root.after(100, lambda: read_aloud_bad_files(badJsonPaths))
+    # then run!
     root.mainloop()
 except Exception as e:
     save_note()

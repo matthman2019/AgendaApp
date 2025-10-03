@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 from datetime import datetime, timedelta
 import json
+from ttkbootstrap.dialogs import Messagebox
 
 if __name__ == "__main__":
     sys.path.append(str(Path(__file__).parent.parent / "Classes"))
@@ -40,7 +41,7 @@ def save_object(object : Note | Notebook | RepeatingEvent | Event | ToDo, newFil
         saveFolderName = "Notebooks"
         fileName = object.title
     elif isinstance(object, (RepeatingEvent, Event, ToDo)):
-        saveFolderName = "Entries"
+        saveFolderName = "Events"
         fileName = object.name
     
     if newFile:
@@ -57,32 +58,60 @@ def save_objects(objectList : list[object : Note | Notebook | RepeatingEvent | E
     for object in objectList:
         save_object(object=object, newFile=newFile)
 
+# makes a Messagebox that shows any files that failed to load
+def read_aloud_bad_files(badFileList : list[Path]):
+    if not len(badFileList):
+        return
+    
+    messageText = "Some files failed to load! The JSON file is probably bad. The files are:\n"
+    for badFile in badFileList:
+        messageText += '  ' + badFile.name + '\n'
+    messageText += "These files weren't loaded. Please either fix or delete these files!"
+    Messagebox.show_error(messageText, "Some files failed to load!", alert=True)
+
 # reads all notes
-def read_notes() -> list[Note]:
+def read_notes() -> tuple[list[Note], list[Path]]:
+    badFileList = []
+
     noteSavePath = savePath / "Notes"
     noteList = []
     for noteJsonPath in noteSavePath.iterdir():
         with open(noteJsonPath, 'r') as noteJson:
-            note = Note.from_dict(json.load(noteJson))
+            try:
+                note = Note.from_dict(json.load(noteJson))
+            except json.decoder.JSONDecodeError:
+                badFileList.append(noteJsonPath)
             noteList.append(note)
-    return noteList
+    
+    return noteList, badFileList
 
-def read_notebooks() -> list[Notebook]:
+def read_notebooks() -> tuple[list[Notebook], list[Path]]:
+    badFileList = []
     specificSavePath = savePath / "Notebooks"
     returnList = []
     for jsonPath in specificSavePath.iterdir():
         with open(jsonPath, 'r') as jsonFile:
-            note = Notebook.from_dict(json.load(jsonFile))
-            returnList.append(note)
-    return returnList
+            try:
+                note = Notebook.from_dict(json.load(jsonFile))
+                returnList.append(note)
+            except json.decoder.JSONDecodeError:
+                badFileList.append(jsonPath)
+                continue
+    return returnList, badFileList
 
 # slightly more complicated. This one tests the attributes in the dictionary to figure out what class / subclass this Entry is.
-def read_entries() -> list[Event | RepeatingEvent | ToDo]:
-    specificSavePath = savePath / "Entries"
+def read_events() -> tuple[list[Event | RepeatingEvent | ToDo], list[Path]]:
+    badFileList = []
+
+    specificSavePath = savePath / "Events"
     returnList = []
     for jsonPath in specificSavePath.iterdir():
         with open(jsonPath, 'r') as jsonFile:
-            dictionary : dict = json.load(jsonFile)
+            try:
+                dictionary : dict = json.load(jsonFile)
+            except json.decoder.JSONDecodeError:
+                badFileList.append(jsonPath)
+                continue
 
             # test keys and figure out class
             if dictionary.__contains__("repeats"):
@@ -93,7 +122,8 @@ def read_entries() -> list[Event | RepeatingEvent | ToDo]:
                 entry = Event.from_dict(dictionary)
 
             returnList.append(entry)
-    return returnList
+    
+    return returnList, badFileList
 
 def delete_object(object : Note | Notebook | RepeatingEvent | Event | ToDo):
     saveFolderName = ''
@@ -105,7 +135,7 @@ def delete_object(object : Note | Notebook | RepeatingEvent | Event | ToDo):
         saveFolderName = "Notebooks"
         fileName = object.title
     elif isinstance(object, (RepeatingEvent, Event, ToDo)):
-        saveFolderName = "Entries"
+        saveFolderName = "Events"
         fileName = object.name
     
     fileName += '.json'
@@ -130,7 +160,7 @@ if __name__ == "__main__":
     '''
     '''
     save_object(RepeatingEvent(), True); save_object(ToDo(), True); save_object(Event(), True)
-    print(read_entries())
+    print(read_events())
     '''
     '''
     # make some bogus RepeatingEvents
