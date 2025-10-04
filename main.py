@@ -157,10 +157,14 @@ userSelectedDate = datetime.datetime.today()
 def ask_date_with_dialog():
     global userSelectedDate, timesClicked
     if timesClicked == 0:
+        # this gives a warning about the dateEntry. I think it only shows up on chromebooks with virtual linux.
+        '''
         Messagebox.show_info("The window that should pop up to ask you the date generally doesn't work first try. "\
                              "It's a very annoying bug, completely out of my control, and I can't fix it. "\
                              "If the date picking window does not show up on your first attempt, try clicking the button again. "\
                              "If that doesn't work after a few tries, restart the program. If none of that worked, you're out of luck. Sorry!")
+        '''
+        pass
     date = dialogs.DatePickerDialog(root)
     userSelectedDate = datetime.datetime.combine(date.date_selected, datetime.time(23, 59, 59, 0))
     timesClicked += 1
