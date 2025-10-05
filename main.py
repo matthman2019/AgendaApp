@@ -535,16 +535,15 @@ def receive_notes_button_function():
         
     receiveRoot.protocol("WM_DELETE_WINDOW", on_close)
     receiveRoot.mainloop()
-    
-    
-    
-    
-
-   
-
 recieveButton.config(command=receive_notes_button_function)
 
+# send button functionality
+def send_notes_button_functionality():
+    sendRoot = ttk.Toplevel("Send Notes")
 
+    sendIPLabel = Label(sendRoot, text="Send IP")
+    sendIPLabel.grid(row=0, column=0)
+sendButton.config(command=send_notes_button_functionality)
 # run tkinter and handle closing
 def on_close():
     message = Messagebox.yesno("Do you want to quit?", "Quit")
