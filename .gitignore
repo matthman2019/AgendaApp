@@ -10,3 +10,7 @@
 /Saves/Events/*
 
 /output
+
+/main.build
+/main.dist
+socketTest.py

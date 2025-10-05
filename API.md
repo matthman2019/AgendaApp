@@ -1,4 +1,4 @@
-# API
+# Class API
 
 ## Event
 
@@ -50,6 +50,8 @@ Attributes
 - body : str = the contents of the note
 - notebook : str | None = the ID of the notebook that this note belongs to. Can be None.
 
+- iid : str = This is used by tkinter. I use this to save the IID of the tkinter widget that represents this note.
+
 ## Notebook
 
 A collection of Notes.
@@ -57,3 +59,34 @@ A collection of Notes.
 Attributes
 - title : str = The name of the Notebook. Must be unique.
 - notes : list (NOT SAVED) = this list is the notes that are inside the notebook. It is generated at runtime for ease in programming.
+
+- iid : str = This is like Note's attribute iid. It's used to identify the widget that represents this notebook.
+
+
+# Network API
+
+Since we'll be sending notes over the network, we'll need some protocol.
+
+I'll refer to the person sending the note as the sender and the person receiving the note as the receiver.
+The receiver hosts the TCP socket server, the sender connects and sends the JSON for a note.
+The receiver then responds back to the sender and closes the connection. (This step exists to let the sender know if their note was sent successfully)
+
+## Sender Messages
+
+The sender just needs to send the JSON for the thing it wants to send. Nothing complicated.
+Use the Note.to_json() method for ease.
+
+## Receiving Responses
+
+### busy
+
+The receiver is currently busy processing something previously sent from the sender's IP address, so it dropped the note sent.
+(This is to prevent people from spamming notes and overwhelming users.)
+
+### success
+
+Successfully sent!
+
+### failjson
+
+Bad json was sent, so the send failed.

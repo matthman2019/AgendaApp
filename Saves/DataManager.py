@@ -150,7 +150,12 @@ def delete_object(object : Note | Notebook | RepeatingEvent | Event | ToDo):
     if filePath.exists():
         filePath.unlink()
         
-
+# this is used with note sharing, to see if the message sent is complete
+def dict_from_json(jsonSent : str):
+    try:
+        return json.loads(jsonSent)
+    except json.decoder.JSONDecodeError:
+        return None
 
 if __name__ == "__main__":
     '''

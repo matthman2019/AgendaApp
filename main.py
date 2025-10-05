@@ -1,8 +1,8 @@
-import calendar
 import datetime
-import time
 from random import randint
 import sys
+import threading
+import socket
 import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap import Label, Frame, Button, Checkbutton
@@ -19,8 +19,9 @@ from Event import Event
 from ToDo import ToDo
 from Notebook import Notebook
 from Note import Note
-from DataManager import save_objects, read_events, read_notebooks, read_notes, delete_object, read_aloud_bad_files
+from DataManager import save_objects, read_events, read_notebooks, read_notes, delete_object, read_aloud_bad_files, dict_from_json
 from EntryWidget import EntryWidget
+from NetworkingHandler import handle_connection
 
 # list setup
 eventList, badEvents = read_events()
@@ -28,6 +29,14 @@ eventList.sort()
 notebookList, badNotebooks = read_notebooks()
 noteList, badNotes = read_notes()
 badJsonPaths = badEvents + badNotebooks + badNotes
+
+IP = None
+PORT = 25313
+
+UNTITLED = "Untitled"
+BUSY = "busy"
+# SUCCESS is already defined in ttkbootstrap
+FAILJSON = "failjson"
 
 # runs through notebookList and finds notebook with a title of title
 def get_notebook_by_title(title:str) -> Notebook:
@@ -37,7 +46,6 @@ def get_notebook_by_title(title:str) -> Notebook:
     return None
 
 # make untitled notebook if necessary
-UNTITLED = "Untitled"
 untitledNotebook = get_notebook_by_title(UNTITLED)
 if untitledNotebook == None:
     untitledNotebook = Notebook(UNTITLED)
@@ -70,13 +78,13 @@ rootNotebook.pack(fill=BOTH, expand=True)
 
 # rootNotebook frame setup
 upcomingFrame = Frame(rootNotebook)
-# calendarFrame = Frame(rootNotebook)
 newEventFrame = Frame(rootNotebook)
 noteFrame = Frame(rootNotebook)
+shareFrame = Frame(rootNotebook)
 rootNotebook.add(upcomingFrame, text="Upcoming")
-# rootNotebook.add(calendarFrame, text="Calendar")
 rootNotebook.add(newEventFrame, text="New Event")
 rootNotebook.add(noteFrame, text="Notebook")
+rootNotebook.add(shareFrame, text="Share Note")
 
 
 # handle notebook tab changes
@@ -160,7 +168,7 @@ def ask_date_with_dialog():
         # this gives a warning about the dateEntry. I think it only shows up on chromebooks with virtual linux.
         '''
         Messagebox.show_info("The window that should pop up to ask you the date generally doesn't work first try. "\
-                             "It's a very annoying bug, completely out of my control, and I can't fix it. "\
+                             "It'serverSocket a very annoying bug, completely out of my control, and I can't fix it. "\
                              "If the date picking window does not show up on your first attempt, try clicking the button again. "\
                              "If that doesn't work after a few tries, restart the program. If none of that worked, you're out of luck. Sorry!")
         '''
@@ -232,7 +240,7 @@ def complete_new_event():
 
     eventNameEntry.delete(0, tk.END)
     eventDescriptionTextbox.delete("1.0", tk.END)
-    # let's not reset color
+    # let'serverSocket not reset color
     # I can't reset date
     eventCompletedBoolVar.set(True)
 
@@ -292,7 +300,7 @@ def load_note(event : tk.Event):
             continue
         selectedObject = notebook
         set_scrolled_text("This is a notebook!\nTry selecting a note. " \
-        "If you can't see any notes, click the plus sign to the left of this notebook's name." \
+        "If you can't see any notes, click the plus sign to the left of this notebook'serverSocket name." \
         "\nModifying this text will not break anything.")
         return
     for note in noteList:
@@ -430,6 +438,111 @@ def check_item_delete():
     else:
         Messagebox.show_info("Nothing was selected, so nothing was deleted.", "Not Deleted", root)
 deleteSelectedButton.config(command=check_item_delete)
+
+
+# share tab
+recieveButton = Button(shareFrame, text="Receive a Note")
+recieveButton.grid(row=0, column=0)
+sendButton = Button(shareFrame, text="Send a Note")
+sendButton.grid(row=1, column=0)
+
+def get_private_IP():
+    global IP
+    if IP is not None:
+        return
+
+    try:
+        IPSocket = socket.create_connection(("1.1.1.1", 80), 5)
+        IP = IPSocket.getsockname()[0]
+    except TimeoutError:
+        pass
+    except OSError:
+        pass
+
+receivingNotes = False
+# receive button functionality
+def receive_notes_button_function():
+    global IP, receivingNotes
+
+    receiveRoot = ttk.Toplevel("Receive Notes")
+    receiveRoot.geometry("750x400")
+
+    progressLabel = Label(receiveRoot, text="Setting things up...")
+    progressLabel.grid(row=0, column=0)
+
+    serverSocket = None
+
+    def start_receiving_notes():
+        global IP, PORT, receivingNotes
+        nonlocal progressLabel, serverSocket
+        receivingNotes = True
+        
+        try:
+            serverSocket = socket.create_server((IP, PORT))
+            serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        except OSError as e:
+            progressLabel.config(text="We weren't able to set up note receiving.\nTry waiting a few minutes, and try again.\n" \
+            "If that doesn't work, you might not be able to share notes from this computer." \
+            f"Error message: \n{e}")
+            return
+        
+        progressLabel.config(text="Successfully set up!" \
+            f"\nTell anyone who wants to send you notes this IP: {IP}\n" \
+            "(This is your private IP. Only people connected to the same network as you \nwill be able to access your computer through it.)" \
+            "\nWe'll create new windows as people share notes with you...")
+        
+        while receivingNotes:
+            clientConnection, address = serverSocket.accept()
+            
+            if handle_connection(clientConnection, address, noteList, notebookList):
+                refresh_notebook_notes()
+        
+        # once we're done receiving notes, close the socket
+        serverSocket.close()
+
+
+
+    # see whether we can start receiving or not (whether private IP was obtained or not)
+    def report_IP_status():
+        global IP
+        if IP is None:
+            progressLabel.config(text="We weren't able to set up note receiving.\nAre you sure that you're connected to the internet?")
+        else:
+            startThread = threading.Thread(target=start_receiving_notes)
+            startThread.start()
+            
+    
+    # see if we need to find private IP. otherwise, show that we're successfully set up already.
+    if IP is None:
+        receiveRoot.after(10, get_private_IP)
+        receiveRoot.after(5700, report_IP_status)
+    else:
+        receiveRoot.after(10, report_IP_status)
+    
+    # closing behavior
+    # notice that the server has to use .accept() above. That's a blocking function!
+    # to break it, we're going to set receivingNotes to false and connect locally
+    def on_close():
+        global receivingNotes
+        print("Break attempted")
+        receivingNotes = False
+        try:
+            breakAcceptSocket = socket.create_connection((IP, PORT))
+            breakAcceptSocket.close()
+        except OSError as e:
+            print(e)
+        receiveRoot.destroy()
+        
+    receiveRoot.protocol("WM_DELETE_WINDOW", on_close)
+    receiveRoot.mainloop()
+    
+    
+    
+    
+
+   
+
+recieveButton.config(command=receive_notes_button_function)
 
 
 # run tkinter and handle closing
