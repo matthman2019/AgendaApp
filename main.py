@@ -3,6 +3,7 @@ from random import randint
 import sys
 import threading
 import socket
+import ipaddress
 import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap import Label, Frame, Button, Checkbutton
@@ -80,11 +81,11 @@ rootNotebook.pack(fill=BOTH, expand=True)
 upcomingFrame = Frame(rootNotebook)
 newEventFrame = Frame(rootNotebook)
 noteFrame = Frame(rootNotebook)
-shareFrame = Frame(rootNotebook)
+# shareFrame = Frame(rootNotebook)
 rootNotebook.add(upcomingFrame, text="Upcoming")
 rootNotebook.add(newEventFrame, text="New Event")
 rootNotebook.add(noteFrame, text="Notebook")
-rootNotebook.add(shareFrame, text="Share Note")
+# rootNotebook.add(shareFrame, text="Share Note")
 
 
 # handle notebook tab changes
@@ -439,12 +440,12 @@ def check_item_delete():
         Messagebox.show_info("Nothing was selected, so nothing was deleted.", "Not Deleted", root)
 deleteSelectedButton.config(command=check_item_delete)
 
+# this was originally going to be its own tab but I decided to merge it with the notebook tab
 
-# share tab
-recieveButton = Button(shareFrame, text="Receive a Note")
-recieveButton.grid(row=0, column=0)
-sendButton = Button(shareFrame, text="Send a Note")
-sendButton.grid(row=1, column=0)
+recieveButton = Button(noteFrame, text="Receive a Note")
+recieveButton.grid(row=4, column=0)
+sendButton = Button(noteFrame, text="Send a Note")
+sendButton.grid(row=4, column=1)
 
 def get_private_IP():
     global IP
@@ -539,10 +540,83 @@ recieveButton.config(command=receive_notes_button_function)
 
 # send button functionality
 def send_notes_button_functionality():
+    global selectedObject
+    if not isinstance(selectedObject, Note):
+        Messagebox.show_info("Please select a note in the notebook tree to send!", "Please select a note", root)
+        return
+    
     sendRoot = ttk.Toplevel("Send Notes")
 
     sendIPLabel = Label(sendRoot, text="Send IP")
     sendIPLabel.grid(row=0, column=0)
+    sendIPEntry = ttk.Entry(sendRoot)
+    sendIPEntry.grid(row=0, column=1)
+    sendNoteLabel = Label(sendRoot, text=f"You'll be sending your note named \"{selectedObject.title}\" to the person with this private IP.")
+    sendNoteLabel.grid(row=1, column=0, columnspan=2, sticky="EW")
+    sendButton = Button(sendRoot, text="Send")
+    sendButton.grid(row=2, column=0)
+    cancelButton = Button(sendRoot, text="Cancel", style=DANGER, command=lambda: sendRoot.destroy())
+    cancelButton.grid(row=2, column=1)
+
+    tryingToSend = False
+
+    def send_button_functionality():
+        # disallow spamming the "send" button
+        nonlocal tryingToSend
+        if tryingToSend:
+            return
+        
+        # check that the IP is valid
+        IPEntered = sendIPEntry.get()
+        try:
+            ipaddress.ip_address(IPEntered)
+        except ValueError:
+            Messagebox.show_error("The IP entered is unusable! Are you sure you typed it in correctly?", "Unusable IP", root)
+            return
+        
+        if not isinstance(selectedObject, Note):
+            Messagebox.show_error("Make sure you're selecting a note in the notebook tree and please try again!", "Selected item is not a note", root)
+        
+        
+        try:
+            tryingToSend = True
+            sendNoteLabel.config(text="Trying to send your note...")
+            sendRoot.destroy()
+            s = socket.create_connection((IPEntered, PORT))
+            s.send(selectedObject.to_json().encode())
+            receiveCode = s.recv(1024)
+            
+            match receiveCode:
+                case "success":
+                    Messagebox.show_info("The note was sent successfully! Woohoo!", "Success!", root)
+                case "busy":
+                    Messagebox.show_info("The person receiving your note is already processing another note that you sent them! Wait a few seconds before trying to send another note.", "Receiver Busy", root)
+                case "failjson":
+                    Messagebox.show_error("The message failed to send: something was wrong with the message itself.\n" \
+                    "You did nothing wrong, but could you please report this to the developer?\n" \
+                    f"Please include this in your error report: {selectedObject.to_json()}", "JSON Error", root)
+                case _:
+                    Messagebox.show_info("Your note sent successfully, but the receiver returned a code that we couldn't understand. \n" \
+                    "The note definitely sent to the receiver, but there's no telling if they were able to save it or not.", "Unknown Response", root)
+
+        except TimeoutError as e:
+            Messagebox.show_error("Unable to send note: the connection timed out. \nAre you sure that you typed the IP in correctly and that the computer you're sending to is in receiving mode?\n" \
+            f"Error code: \nTimeoutError: {e}", "Timeout Error", root)
+        except OSError as e:
+            Messagebox.show_error("Unable to send note: the connection didn't work. \nAre you sure that you typed the IP in correctly and that the computer you're sending to is in receiving mode?\n" \
+            f"Error code: \nOSError: {e}", "OSError", root)
+        except Exception as e:
+            Messagebox.show_error("Something went wrong, but we're not sure what. Please report this to the developer!" \
+            f"Error code: \n{e}", "Exception", root)
+        finally:
+            tryingToSend = False
+    sendButton.config(command=send_button_functionality)
+
+
+        
+
+
+
 sendButton.config(command=send_notes_button_functionality)
 # run tkinter and handle closing
 def on_close():

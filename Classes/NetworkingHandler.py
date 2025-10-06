@@ -15,6 +15,7 @@ def handle_connection(clientConnection : socket.socket, address, noteList : list
     def closeConnectionWithCode(code : str):
         clientConnection.send(code.encode())
         clientConnection.close()
+        del addressList[addressList.index(address)]
 
     def get_notebook_by_title(title:str) -> Notebook:
         for notebook in notebookList:
