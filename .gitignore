@@ -12,6 +12,9 @@
 # pyinstaller stuff
 /output
 
+/main.build
+/main.dist
+socketTest.py
 AgendaApp.spec
 /dist
 /build
