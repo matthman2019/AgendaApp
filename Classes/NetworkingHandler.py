@@ -12,6 +12,7 @@ from Notebook import Notebook
 
 addressList = []
 def handle_connection(clientConnection : socket.socket, address, noteList : list, notebookList : list) -> bool:
+    Messagebox.show_info("Yo bro we got something")
     def closeConnectionWithCode(code : str):
         clientConnection.send(code.encode())
         clientConnection.close()
@@ -81,4 +82,4 @@ def handle_connection(clientConnection : socket.socket, address, noteList : list
         closeConnectionWithCode(SUCCESS.encode())
         return True
     
-    
+
