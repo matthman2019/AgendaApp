@@ -9,4 +9,9 @@
 /Saves/Notebooks/*
 /Saves/Events/*
 
+# pyinstaller stuff
 /output
+
+AgendaApp.spec
+/dist
+/build
