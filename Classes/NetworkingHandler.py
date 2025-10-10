@@ -11,16 +11,11 @@ from Notebook import Notebook
 
 addressList = []
 def handle_connection(clientConnection : socket.socket, address, noteList : list, notebookList : list) -> Note:
+
     def closeConnectionWithCode(code : str):
         clientConnection.send(code.encode())
         clientConnection.close()
         del addressList[addressList.index(address)]
-
-    def get_notebook_by_title(title:str) -> Notebook:
-        for notebook in notebookList:
-            if notebook.title == title:
-                return notebook
-        return None
 
     # check that we're not already receiving a message from this person
     if address in addressList:
@@ -48,7 +43,10 @@ def handle_connection(clientConnection : socket.socket, address, noteList : list
     except KeyError:
         closeConnectionWithCode(FAILJSON)
         return
-
+    
+    closeConnectionWithCode(SUCCESS)
+    return sentNote
+    '''
     confirmSave = Messagebox.yesno(f"You've received a note! \n  Title: {sentNote.title}\n  Body: {sentNote.body}\n  Notebook: {sentNote.notebook}\nWould you like to save this note?", "Note Received!")
 
     if confirmSave != "Yes":
@@ -79,5 +77,5 @@ def handle_connection(clientConnection : socket.socket, address, noteList : list
         noteList.append(sentNote)
         closeConnectionWithCode(SUCCESS)
         return sentNote
-    
+    '''
 

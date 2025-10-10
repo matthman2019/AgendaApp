@@ -32,8 +32,8 @@ noteList, badNotes = read_notes()
 badJsonPaths = badEvents + badNotebooks + badNotes
 
 localhostMode = True
-IP = None
 PORT = 25313
+IP = "127.0.0.1" if localhostMode else None
 
 UNTITLED = "Untitled"
 BUSY = "busy"
@@ -465,6 +465,7 @@ def get_private_IP():
     except OSError:
         pass
 
+
 receivingNotes = False
 # receive button functionality
 def receive_notes_button_function():
@@ -503,9 +504,8 @@ def receive_notes_button_function():
 
             while receivingNotes:
                 clientConnection, address = serverSocket.accept()
-                print("Handling connection")
                 note = handle_connection(clientConnection, address, noteList, notebookList)
-                if note is not None:
+                if note:
                     incomingNoteList.append(note)
         
             # once we're done receiving notes, close the socket
@@ -519,7 +519,10 @@ def receive_notes_button_function():
     # this function checks notes every second. It runs over and over
     def check_incoming_notes():
         nonlocal incomingNoteList, check_incoming_notes_id
+
+        # if no notes, reset for a new check and return
         if not incomingNoteList:
+            check_incoming_notes_id = receiveRoot.after(1000, check_incoming_notes)
             return
         
         for sentNote in incomingNoteList:
@@ -532,24 +535,28 @@ def receive_notes_button_function():
             notebookForNote = get_notebook_by_title(sentNote.notebook)
             if notebookForNote is not None:
                 noteList.append(sentNote)
+                continue
             
             newNotebookChoice = dialogs.MessageDialog(
-                message=f"This note bass inside a notebook named {sentNote.notebook}, which doesn't currently exist on your computer." \
+                message=f"This note was inside a notebook named {sentNote.notebook}, which doesn't currently exist on your computer." \
                 "\nWould you like to make this notebook for the note? If not, this note will be put in the untitled notebook.",
                 title="New Notebook?",
                 buttons=["New Notebook", "Untitled Notebook"]
                 )
+            newNotebookChoice.show()
             
-            if newNotebookChoice == "Untitled Notebook":
+            if newNotebookChoice._result == "Untitled Notebook":
                 sentNote.notebook = UNTITLED
                 noteList.append(sentNote)
+                continue
             else:
                 newNotebookForNote = Notebook(sentNote.notebook)
                 notebookList.append(newNotebookForNote)
                 noteList.append(sentNote)
+                continue
         
-        refresh_notebook_notes()
-
+        incomingNoteList = []
+        refresh_notebook_treeview()
         check_incoming_notes_id = receiveRoot.after(1000, check_incoming_notes)
     
     check_incoming_notes_id = receiveRoot.after(1000, check_incoming_notes)
@@ -575,7 +582,6 @@ def receive_notes_button_function():
     # to break it, we're going to set receivingNotes to false and connect locally
     def on_close():
         global receivingNotes
-        print("Break attempted")
 
         receivingNotes = False
         try:
@@ -630,27 +636,26 @@ def send_notes_button_functionality():
         if not isinstance(selectedObject, Note):
             Messagebox.show_error("Make sure you're selecting a note in the notebook tree and please try again!", "Selected item is not a note", root)
         
-        
+        save_note()
         try:
             tryingToSend = True
             sendNoteLabel.config(text="Trying to send your note...")
             sendRoot.destroy()
             s = socket.create_connection((IPEntered, PORT))
             s.send(selectedObject.to_json().encode())
-            receiveCode = s.recv(1024)
+            receiveCode = s.recv(1024).decode()
             
-            match receiveCode:
-                case "success":
-                    Messagebox.show_info("The note was sent successfully! Woohoo!", "Success!", root)
-                case "busy":
-                    Messagebox.show_info("The person receiving your note is already processing another note that you sent them! Wait a few seconds before trying to send another note.", "Receiver Busy", root)
-                case "failjson":
-                    Messagebox.show_error("The message failed to send: something was wrong with the message itself.\n" \
-                    "You did nothing wrong, but could you please report this to the developer?\n" \
-                    f"Please include this in your error report: {selectedObject.to_json()}", "JSON Error", root)
-                case _:
-                    Messagebox.show_info("Your note sent successfully, but the receiver returned a code that we couldn't understand. \n" \
-                    "The note definitely sent to the receiver, but there's no telling if they were able to save it or not.", "Unknown Response", root)
+            if receiveCode == SUCCESS:
+                Messagebox.show_info("The note was sent successfully! Woohoo!", "Success!", root)
+            elif receiveCode == BUSY:
+                Messagebox.show_info("The person receiving your note is already processing another note that you sent them! Wait a few seconds before trying to send another note.", "Receiver Busy", root)
+            elif receiveCode == FAILJSON:
+                Messagebox.show_error("The message failed to send: something was wrong with the message itself.\n" \
+                "You did nothing wrong, but could you please report this to the developer?\n" \
+                f"Please include this in your error report: {selectedObject.to_json()}", "JSON Error", root)
+            else:
+                Messagebox.show_info("Your note sent successfully, but the receiver returned a code that we couldn't understand. \n" \
+                f"The note definitely sent to the receiver, but there's no telling if they were able to save it or not. The code was: {receiveCode}", "Unknown Response", root)
 
         except TimeoutError as e:
             Messagebox.show_error("Unable to send note: the connection timed out. \nAre you sure that you typed the IP in correctly and that the computer you're sending to is in receiving mode?\n" \
