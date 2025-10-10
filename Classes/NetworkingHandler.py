@@ -11,8 +11,7 @@ from Note import Note
 from Notebook import Notebook
 
 addressList = []
-def handle_connection(clientConnection : socket.socket, address, noteList : list, notebookList : list) -> bool:
-    Messagebox.show_info("Yo bro we got something")
+def handle_connection(clientConnection : socket.socket, address, noteList : list, notebookList : list) -> Note:
     def closeConnectionWithCode(code : str):
         clientConnection.send(code.encode())
         clientConnection.close()
@@ -27,7 +26,7 @@ def handle_connection(clientConnection : socket.socket, address, noteList : list
     # check that we're not already receiving a message from this person
     if address in addressList:
         closeConnectionWithCode(BUSY)
-        return False
+        return
     
     addressList.append(address)
     
@@ -43,13 +42,13 @@ def handle_connection(clientConnection : socket.socket, address, noteList : list
 
         if timesReceived > 1000:
             closeConnectionWithCode(FAILJSON)
-            return
+            return 
     # if the Note can't be created, send FAILJSON
     try:
         sentNote = Note.from_dict(sentDict)
     except KeyError:
         closeConnectionWithCode(FAILJSON)
-        return False
+        return
 
     confirmSave = Messagebox.yesno(f"You've received a note! \n  Title: {sentNote.title}\n  Body: {sentNote.body}\n  Notebook: {sentNote.notebook}\nWould you like to save this note?", "Note Received!")
 
@@ -60,8 +59,8 @@ def handle_connection(clientConnection : socket.socket, address, noteList : list
     notebookForNote = get_notebook_by_title(sentNote.notebook)
     if notebookForNote is not None:
         noteList.append(sentNote)
-        closeConnectionWithCode(SUCCESS.encode())
-        return True
+        closeConnectionWithCode(SUCCESS)
+        return sentNote
     
     newNotebookChoice = MessageDialog(
         message=f"This note was inside a notebook named {sentNote.notebook}, which doesn't currently exist on your computer." \
@@ -73,13 +72,13 @@ def handle_connection(clientConnection : socket.socket, address, noteList : list
     if newNotebookChoice == "Untitled Notebook":
         sentNote.notebook = UNTITLED
         noteList.append(sentNote)
-        closeConnectionWithCode(SUCCESS.encode())
-        return True
+        closeConnectionWithCode(SUCCESS)
+        return sentNote
     else:
         newNotebookForNote = Notebook(sentNote.notebook)
         notebookList.append(newNotebookForNote)
         noteList.append(sentNote)
-        closeConnectionWithCode(SUCCESS.encode())
-        return True
+        closeConnectionWithCode(SUCCESS)
+        return sentNote
     
 

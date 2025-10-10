@@ -472,10 +472,11 @@ def receive_notes_button_function():
     progressLabel.grid(row=0, column=0)
 
     serverSocket = None
+    incomingNoteList : list[Note] = []
 
     def start_receiving_notes():
         global IP, PORT, receivingNotes
-        nonlocal progressLabel, serverSocket
+        nonlocal progressLabel, serverSocket, incomingNoteList
         receivingNotes = True
         
         try:
@@ -491,17 +492,62 @@ def receive_notes_button_function():
             f"\nTell anyone who wants to send you notes this IP: {IP}\n" \
             "(This is your private IP. Only people connected to the same network as you \nwill be able to access your computer through it.)" \
             "\nWe'll create new windows as people share notes with you...")
+
+        def socketHandler():
+            nonlocal incomingNoteList
+
+            while receivingNotes:
+                clientConnection, address = serverSocket.accept()
+                print("Handling connection")
+                note = handle_connection(clientConnection, address, noteList, notebookList)
+                if note is not None:
+                    incomingNoteList.append(note)
         
-        while receivingNotes:
-            clientConnection, address = serverSocket.accept()
+            # once we're done receiving notes, close the socket
+            serverSocket.close()
+        
+        socketHandlerThread = threading.Thread(target=socketHandler)
+        socketHandlerThread.start()
+    
+    # this stores the ID to cancel the .after() call
+    check_incoming_notes_id = None
+    # this function checks notes every second. It runs over and over
+    def check_incoming_notes():
+        nonlocal incomingNoteList, check_incoming_notes_id
+        if not incomingNoteList:
+            return
+        
+        for sentNote in incomingNoteList:
+            confirmSave = Messagebox.yesno(f"You've received a note! \n  Title: {sentNote.title}\n  Body: {sentNote.body}\n  Notebook: {sentNote.notebook}\nWould you like to save this note?", "Note Received!")
+
+            if confirmSave != "Yes":
+                Messagebox.show_info("The message was not saved.", "Note Ignored")
             
-            if handle_connection(clientConnection, address, noteList, notebookList):
-                refresh_notebook_notes()
+            # figure out what to do with the note's notebook
+            notebookForNote = get_notebook_by_title(sentNote.notebook)
+            if notebookForNote is not None:
+                noteList.append(sentNote)
+            
+            newNotebookChoice = dialogs.MessageDialog(
+                message=f"This note bass inside a notebook named {sentNote.notebook}, which doesn't currently exist on your computer." \
+                "\nWould you like to make this notebook for the note? If not, this note will be put in the untitled notebook.",
+                title="New Notebook?",
+                buttons=["New Notebook", "Untitled Notebook"]
+                )
+            
+            if newNotebookChoice == "Untitled Notebook":
+                sentNote.notebook = UNTITLED
+                noteList.append(sentNote)
+            else:
+                newNotebookForNote = Notebook(sentNote.notebook)
+                notebookList.append(newNotebookForNote)
+                noteList.append(sentNote)
         
-        # once we're done receiving notes, close the socket
-        serverSocket.close()
+        refresh_notebook_notes()
 
-
+        check_incoming_notes_id = receiveRoot.after(1000, check_incoming_notes)
+    
+    check_incoming_notes_id = receiveRoot.after(1000, check_incoming_notes)
 
     # see whether we can start receiving or not (whether private IP was obtained or not)
     def report_IP_status():
@@ -509,8 +555,7 @@ def receive_notes_button_function():
         if IP is None:
             progressLabel.config(text="We weren't able to set up note receiving.\nAre you sure that you're connected to the internet?")
         else:
-            startThread = threading.Thread(target=start_receiving_notes)
-            startThread.start()
+            start_receiving_notes()
             
     
     # see if we need to find private IP. otherwise, show that we're successfully set up already.
@@ -526,16 +571,19 @@ def receive_notes_button_function():
     def on_close():
         global receivingNotes
         print("Break attempted")
+
         receivingNotes = False
         try:
             breakAcceptSocket = socket.create_connection((IP, PORT))
             breakAcceptSocket.close()
         except OSError as e:
             print(e)
+        receiveRoot.after_cancel(check_incoming_notes_id)
         receiveRoot.destroy()
         
     receiveRoot.protocol("WM_DELETE_WINDOW", on_close)
     receiveRoot.mainloop()
+
 recieveButton.config(command=receive_notes_button_function)
 
 # send button functionality
