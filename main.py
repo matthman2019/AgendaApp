@@ -31,6 +31,7 @@ notebookList, badNotebooks = read_notebooks()
 noteList, badNotes = read_notes()
 badJsonPaths = badEvents + badNotebooks + badNotes
 
+localhostMode = True
 IP = None
 PORT = 25313
 
@@ -448,9 +449,13 @@ sendButton = Button(noteFrame, text="Send a Note")
 sendButton.grid(row=4, column=1)
 
 def get_private_IP():
-    global IP
+    global IP, localhostMode
     if IP is not None:
         return
+    if localhostMode:
+        IP = "127.0.0.1"
+        return
+    
 
     try:
         IPSocket = socket.create_connection(("1.1.1.1", 80), 5)

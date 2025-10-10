@@ -1,5 +1,4 @@
 import socket
-from ttkbootstrap.dialogs import Messagebox, MessageDialog
 
 BUSY = "busy"
 SUCCESS = "success"
