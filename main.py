@@ -31,7 +31,7 @@ notebookList, badNotebooks = read_notebooks()
 noteList, badNotes = read_notes()
 badJsonPaths = badEvents + badNotebooks + badNotes
 
-localhostMode = True
+localhostMode = False
 PORT = 25313
 IP = "127.0.0.1" if localhostMode else None
 
