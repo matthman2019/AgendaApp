@@ -302,7 +302,7 @@ def load_note(event : tk.Event):
             continue
         selectedObject = notebook
         set_scrolled_text("This is a notebook!\nTry selecting a note. " \
-        "If you can't see any notes, click the plus sign to the left of this notebook'serverSocket name." \
+        "If you can't see any notes, click the plus sign to the left of this notebook's name." \
         "\nModifying this text will not break anything.")
         return
     for note in noteList:
