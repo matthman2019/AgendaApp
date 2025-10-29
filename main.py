@@ -1,28 +1,483 @@
-import datetime
+from datetime import timedelta, datetime, time
 from random import randint
 import sys
 import threading
 import socket
 import ipaddress
+import json
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Callable
 import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap import Label, Frame, Button, Checkbutton
+from ttkbootstrap.tooltip import ToolTip
 from ttkbootstrap import dialogs, scrolled, widgets, colorutils
 from ttkbootstrap.dialogs import Messagebox
 from ttkbootstrap.dialogs.colorchooser import ColorChooserDialog
 from ttkbootstrap.constants import *
 
-sys.path.append("Classes")
-sys.path.append("Saves")
 
-from RepeatingEvent import RepeatingEvent
-from Event import Event
-from ToDo import ToDo
-from Notebook import Notebook
-from Note import Note
-from DataManager import save_objects, read_events, read_notebooks, read_notes, delete_object, read_aloud_bad_files, dict_from_json
-from EntryWidget import EntryWidget
-from NetworkingHandler import handle_connection
+# I will now paste the classes in from every file in /Classes to make this work
+zeroTime = timedelta(0)
+
+# Stores an entry.
+# Note that __ge__, __gt__, and such compare times.
+# So if event2 happens later than event1, event2 > event1.
+@dataclass
+class Event:
+    name : str = "Untitled Entry"
+    description : str = "This entry has no description yet!"
+    occurance : datetime = datetime.today() + timedelta(1.0)
+    color : str = "#FF0000"
+
+    def to_dict(self):
+        my_dict = {}
+
+        for attributeName in dir(self):
+            # don't put dunder methods or dunder attributes in the dictionary
+            if attributeName.endswith("__"):
+                continue
+            
+            # don't put methods in the dictionary
+            attribute = getattr(self, attributeName)
+            if callable(attribute):
+                continue
+
+            value = getattr(self, attributeName)
+            
+            # making sure that attribut
+            if isinstance(value, datetime):
+                value = value.isoformat()
+            elif isinstance(value, timedelta):
+                repetionTime = value
+                # I got angry, so this is my solution. No fancy methods. Just storing days, seconds, and microseconds
+                value = f"{str(repetionTime.days)}/{str(repetionTime.seconds)}/{str(repetionTime.microseconds)}"
+            my_dict[attributeName] = value
+        return my_dict
+    
+    def to_json(self):
+        return json.dumps(self.to_dict())
+    
+    @classmethod
+    def from_dict(cls, dictionary:dict) -> "Event":
+        newEntry = Event()
+        newEntry.name = dictionary["name"]
+        newEntry.description = dictionary["description"]
+        newEntry.occurance = datetime.fromisoformat(dictionary["occurance"])
+        newEntry.color = dictionary["color"]
+        return newEntry
+    
+    def __sub__(self, other : "Event") -> timedelta:
+        return self.occurance - other.occurance
+    
+    def __gt__(self, other : "Event") -> bool:
+        timeDifferencce = self - other
+        return (timeDifferencce > zeroTime)
+
+    def __lt__(self, other : "Event") -> bool:
+        timeDifferencce = self - other
+        return (timeDifferencce < zeroTime)
+    
+    def __ge__(self, other : "Event") -> bool:
+        timeDifferencce = self - other
+        return (timeDifferencce >= zeroTime)
+    
+    def __le__(self, other : "Event") -> bool:
+        timeDifferencce = self - other
+        return (timeDifferencce <= zeroTime)
+
+@dataclass
+class Note:
+    title : str = "Untitled Note"
+    lastedit : datetime = datetime.today()
+    body : str = ""
+    notebook : str | None = None
+    iid = None # tkinter uses this
+
+    def to_dict(self):
+        my_dict = {}
+
+        for attributeName in dir(self):
+            # don't put dunder methods or dunder attributes in the dictionary
+            if attributeName.endswith("__"):
+                continue
+
+            if attributeName == "iid":
+                continue
+            
+            # don't put methods in the dictionary
+            attribute = getattr(self, attributeName)
+            if callable(attribute):
+                continue
+
+            value = getattr(self, attributeName)
+            
+            # making sure that attribut
+            if isinstance(value, datetime):
+                value = value.isoformat()
+            elif isinstance(value, timedelta):
+                repetionTime = value
+                # I got angry, so this is my solution. No fancy methods. Just storing days, seconds, and microseconds
+                value = f"{str(repetionTime.days)}/{str(repetionTime.seconds)}/{str(repetionTime.microseconds)}"
+            my_dict[attributeName] = value
+        return my_dict
+    
+    def to_json(self):
+        return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_dict(cls, dictionary : dict):
+        newNote = Note()
+        newNote.title = dictionary["title"]
+        newNote.lastedit = datetime.fromisoformat(dictionary["lastedit"])
+        newNote.body = dictionary["body"]
+        newNote.notebook = dictionary["notebook"]
+        return newNote
+    
+titlesUsed = []
+
+class Notebook:
+
+    def __init__(self, title : str = "Untitled Notebook", notes : list = []):
+        global titlesUsed
+        while title in titlesUsed:
+            title += "2"
+        self.title = title
+        self.notes : list[Note] = []
+        self.iid = None # this is used with tkinter
+    
+    def __str__(self):
+        return f"Notebook: {self.title}"
+
+    def add_note(self, note : Note):
+        note.notebook = self.title
+        self.notes.append(note)
+
+    def to_dict(self):
+        my_dict = {}
+
+        for attributeName in dir(self):
+            # don't put dunder methods or dunder attributes in the dictionary
+            if attributeName.endswith("__"):
+                continue
+            # making sure that attribute name is not an attribute that doesn't need to be saved
+            if attributeName == "notes" or attributeName == "iid":
+                continue
+            
+            # don't put methods in the dictionary
+            attribute = getattr(self, attributeName)
+            if callable(attribute):
+                continue
+
+            value = getattr(self, attributeName)
+            my_dict[attributeName] = value
+        return my_dict
+    
+    def to_json(self):
+        return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_dict(cls, dictionary:dict) -> "Notebook":
+        newNotebook = Notebook()
+        newNotebook.title = dictionary["title"]
+        return newNotebook
+    
+class RepeatingEvent(Event):
+    def __init__(self, 
+                name : str = "Untitled Entry", 
+                description : str = "This entry has no description yet!",
+                occurance : datetime = datetime.today() + timedelta(1.0),
+                color : str = "#FF0000",
+                repeats : bool = True,
+                repeatTime : timedelta = None):
+        
+        super().__init__(name, description, occurance, color)
+        self.repeats : bool = repeats
+        self.repeatTime : timedelta = repeatTime
+        if repeatTime is None:
+            # we set the default repeat time to one year. 366 days if a leap year, 365 otherwise
+            if isleap(occurance.year):
+                self.repeatTime = timedelta(366)
+            else:
+                self.repeatTime = timedelta(365)
+    
+    @classmethod
+    def from_dict(cls, dictionary:dict) -> "Event":
+        newEntry = RepeatingEvent()
+        newEntry.name = dictionary["name"]
+        newEntry.description = dictionary["description"]
+        newEntry.occurance = datetime.fromisoformat(dictionary["occurance"])
+        newEntry.color = dictionary["color"]
+        newEntry.repeats = dictionary["repeats"]
+        repeatTime = dictionary["repeatTime"]
+        days, seconds, microseconds = repeatTime.split("/")
+        newEntry.repeatTime = timedelta(float(days), float(seconds), float(microseconds))
+        return newEntry
+    
+    def check_and_fix_date(self):
+        while self.occurance - datetime.today() < timedelta(0):
+            if self.repeats:
+                self.occurance = self.occurance + self.repeatTime
+
+class ToDo(Event):
+    def __init__(self, 
+                name : str = "Untitled Entry", 
+                description : str = "This entry has no description yet!",
+                occurance : datetime = datetime.today() + timedelta(1.0),
+                color : str = "#FF0000",
+                completed : bool = False):
+        
+        super().__init__(name, description, occurance, color)
+        self.completed = completed
+    
+    @classmethod
+    def from_dict(cls, dictionary:dict) -> "ToDo":
+        newEntry = ToDo()
+        newEntry.name = dictionary["name"]
+        newEntry.description = dictionary["description"]
+        newEntry.occurance = datetime.fromisoformat(dictionary["occurance"])
+        newEntry.color = dictionary["color"]
+        newEntry.completed = dictionary["completed"]
+        return newEntry
+
+
+class EntryWidget:
+    def __init__(self, master = None, entry : RepeatingEvent | ToDo | Event = None):
+        if entry is None:
+            entry = Event(color="#FF0000")
+        self.entry = entry
+
+        self.frame = ttk.Frame(master, padding=4)
+
+        self.myStyle = ttk.Style()
+        self.styleName = f"{self.entry.name}.TFrame"
+        self.myStyle.configure(self.styleName, foreground=self.entry.color, background=self.entry.color)
+        self.frame.config(style=self.styleName)
+
+        self.frame.columnconfigure(0, minsize=10)
+        self.frame.columnconfigure(20, weight=1)
+
+        self.entryLabel = ttk.Label(self.frame, text=self.entry.name, background="white", padding=4)
+        self.entryLabel.grid(row=0, column=1)
+
+        self.tooltip = ToolTip(self.frame, text=self.entry.description)
+
+        # checkbox for ToDos
+        self.checkbox = None
+        self.completedVar = None
+        self.onDeleteCallback : Callable[[EntryWidget]] = None
+        if isinstance(self.entry, ToDo):
+            self.completedVar = tk.BooleanVar(value=self.entry.completed)
+
+            def on_checkbox_toggle():
+                self.entry.completed = self.completedVar.get()
+
+            self.checkbox = ttk.Checkbutton(self.frame, text="Completed", variable=self.completedVar, command=on_checkbox_toggle)
+            self.checkbox.grid(row=0, column=3, padx=5)
+
+        self.lateWarning = None
+
+        # warning if item is past date
+        if self.entry.occurance - datetime.today() < timedelta(0):
+            self.lateWarning = ttk.Label(self.frame, text="Past Due", style="Danger")
+            self.lateWarning.grid(row=0, column=6, padx=5)
+
+        # delete button
+        def check_delete():
+            if Messagebox.yesno("Are you sure that you want to delete this entry?", "Delete Entry") == "Yes":
+                self.onDeleteCallback(self)
+        self.deleteButton = ttk.Button(self.frame, text="🗑️", style="danger", command=check_delete)
+        self.deleteButton.grid(row=0, column=20, sticky="e")
+        
+    
+    def default_pack(self):
+        self.frame.pack(fill="x", expand=False, anchor="n", padx=5, pady=5)
+
+savePath = Path(__file__).parent / "Saves"
+if not savePath.exists():
+    savePath.mkdir()
+
+def _get_safe_name(originalString : str, folder : Path, jsonMode = False) -> str:
+    returnString = originalString
+    number = 2
+    while (folder / (returnString + ".json")).exists():
+        returnString = originalString + str(number)
+        number += 1
+        if number > 100000:
+            raise Exception("Something is wrong. There can't be 100000 of the same note!")
+    
+    if jsonMode:
+        returnString += ".json"
+    return returnString
+
+# saves a note!
+# if newFile, a new .json file will always be created.
+# otherwise, save_note can overwrite notes with the same title.
+def save_object(object : Note | Notebook | RepeatingEvent | Event | ToDo, newFile : bool = False) -> None:
+    saveFolderName = ''
+    
+    if isinstance(object, Note):
+        saveFolderName = "Notes"
+        fileName = object.title
+    elif isinstance(object, Notebook):
+        saveFolderName = "Notebooks"
+        fileName = object.title
+    elif isinstance(object, (RepeatingEvent, Event, ToDo)):
+        saveFolderName = "Events"
+        fileName = object.name
+    
+    if newFile:
+        fileName = _get_safe_name(fileName, savePath / saveFolderName)
+        object.title = fileName
+    
+    fileName = fileName + '.json'
+    
+    with open(savePath / saveFolderName / fileName, 'w') as file:
+        json.dump(object.to_dict(), file, indent=3)
+
+# saves a list or tuple of objects.
+def save_objects(objectList : list[object : Note | Notebook | RepeatingEvent | Event | ToDo], newFile : bool = False):
+    for object in objectList:
+        save_object(object=object, newFile=newFile)
+
+# makes a Messagebox that shows any files that failed to load
+def read_aloud_bad_files(badFileList : list[Path]):
+    if not len(badFileList):
+        return
+    
+    messageText = "Some files failed to load! The JSON file is probably bad. The files are:\n"
+    for badFile in badFileList:
+        messageText += '  ' + badFile.name + '\n'
+    messageText += "These files weren't loaded. Please either fix or delete these files!"
+    Messagebox.show_error(messageText, "Some files failed to load!", alert=True)
+
+# reads all notes
+def read_notes() -> tuple[list[Note], list[Path]]:
+    badFileList = []
+
+    noteSavePath = savePath / "Notes"
+    noteList = []
+    if not noteSavePath.exists():
+        noteSavePath.mkdir()
+    for noteJsonPath in noteSavePath.iterdir():
+        with open(noteJsonPath, 'r') as noteJson:
+            try:
+                note = Note.from_dict(json.load(noteJson))
+            except json.decoder.JSONDecodeError:
+                badFileList.append(noteJsonPath)
+            noteList.append(note)
+    
+    return noteList, badFileList
+
+def read_notebooks() -> tuple[list[Notebook], list[Path]]:
+    badFileList = []
+    specificSavePath = savePath / "Notebooks"
+    returnList = []
+    if not specificSavePath.exists():
+        specificSavePath.mkdir()
+    for jsonPath in specificSavePath.iterdir():
+        with open(jsonPath, 'r') as jsonFile:
+            try:
+                note = Notebook.from_dict(json.load(jsonFile))
+                returnList.append(note)
+            except json.decoder.JSONDecodeError:
+                badFileList.append(jsonPath)
+                continue
+    return returnList, badFileList
+
+# slightly more complicated. This one tests the attributes in the dictionary to figure out what class / subclass this Entry is.
+def read_events() -> tuple[list[Event | RepeatingEvent | ToDo], list[Path]]:
+    badFileList = []
+
+    specificSavePath = savePath / "Events"
+    if not specificSavePath.exists():
+        specificSavePath.mkdir()
+    returnList = []
+    for jsonPath in specificSavePath.iterdir():
+        with open(jsonPath, 'r') as jsonFile:
+            try:
+                dictionary : dict = json.load(jsonFile)
+            except json.decoder.JSONDecodeError:
+                badFileList.append(jsonPath)
+                continue
+
+            # test keys and figure out class
+            if dictionary.__contains__("repeats"):
+                entry = RepeatingEvent.from_dict(dictionary)
+            elif dictionary.__contains__("completed"):
+                entry = ToDo.from_dict(dictionary)
+            else:
+                entry = Event.from_dict(dictionary)
+
+            returnList.append(entry)
+    
+    return returnList, badFileList
+
+def delete_object(object : Note | Notebook | RepeatingEvent | Event | ToDo):
+    saveFolderName = ''
+    
+    if isinstance(object, Note):
+        saveFolderName = "Notes"
+        fileName = object.title
+    elif isinstance(object, Notebook):
+        saveFolderName = "Notebooks"
+        fileName = object.title
+    elif isinstance(object, (RepeatingEvent, Event, ToDo)):
+        saveFolderName = "Events"
+        fileName = object.name
+    
+    fileName += '.json'
+    
+    filePath = savePath / saveFolderName / fileName
+    if filePath.exists():
+        filePath.unlink()
+
+# this is used with note sharing, to see if the message sent is complete
+def dict_from_json(jsonSent : str):
+    try:
+        return json.loads(jsonSent)
+    except json.decoder.JSONDecodeError:
+        return None
+    
+addressList = []
+def handle_connection(clientConnection : socket.socket, address, noteList : list, notebookList : list) -> Note:
+
+    def closeConnectionWithCode(code : str):
+        clientConnection.send(code.encode())
+        clientConnection.close()
+        del addressList[addressList.index(address)]
+
+    # check that we're not already receiving a message from this person
+    if address in addressList:
+        closeConnectionWithCode(BUSY)
+        return
+    
+    addressList.append(address)
+    
+    # receive the JSON
+    receivedText = ''
+    timesReceived = 0
+    sentDict : dict = None
+    sentNote : Note = None
+    while sentDict is None:
+        receivedText += clientConnection.recv(1024).decode()
+        sentDict = dict_from_json(receivedText)
+        timesReceived += 1
+
+        if timesReceived > 1000:
+            closeConnectionWithCode(FAILJSON)
+            return 
+    # if the Note can't be created, send FAILJSON
+    try:
+        sentNote = Note.from_dict(sentDict)
+    except KeyError:
+        closeConnectionWithCode(FAILJSON)
+        return
+    
+    closeConnectionWithCode(SUCCESS)
+    return sentNote
+
 
 # list setup
 eventList, badEvents = read_events()
@@ -153,7 +608,7 @@ eventDescriptionLabel.grid(row=2, column=0)
 eventDescriptionTextbox = scrolled.ScrolledText(newEventFrame, height=5, width=50, autohide=True)
 eventDescriptionTextbox.grid(row=2, column=1, sticky="WE")
 
-userSelectedDate = datetime.datetime.today()
+userSelectedDate = datetime.today()
 # row 3: occurance
 eventOccuranceLabel = Label(newEventFrame, text="Occurance")
 eventOccuranceLabel.grid(row=3, column=0)
@@ -163,7 +618,7 @@ eventDateButton = Button(newEventFrame, text="Click on me to choose a date", com
 eventDateButton.grid(row=3, column=1)
 
 timesClicked = 0
-userSelectedDate = datetime.datetime.today()
+userSelectedDate = datetime.today()
 def ask_date_with_dialog():
     global userSelectedDate, timesClicked
     if timesClicked == 0:
@@ -176,7 +631,7 @@ def ask_date_with_dialog():
         '''
         pass
     date = dialogs.DatePickerDialog(root)
-    userSelectedDate = datetime.datetime.combine(date.date_selected, datetime.time(23, 59, 59, 0))
+    userSelectedDate = datetime.combine(date.date_selected, time(23, 59, 59, 0))
     timesClicked += 1
 eventDateButton.config(command=ask_date_with_dialog)
 
@@ -186,7 +641,11 @@ def chooseNewColor():
     global newEventColor, eventColorButton
     cd = ColorChooserDialog(root, "Choose a color for the new event")
     cd.show()
-    newEventColor = cd.result.hex
+    try:
+        newEventColor = cd.result.hex
+    except:
+        newEventColor = "#FF0000"
+        print("No hex color! Defaulting to red.")
     eventColorButtonStyle.configure("NewEventButton.TButton", background=newEventColor)
 eventColorLabel = Label(newEventFrame, text="Color")
 eventColorLabel.grid(row=4, column=0)
@@ -285,7 +744,7 @@ def save_note():
         return
     if isinstance(selectedObject, Note):
         selectedObject.body = noteScrolledtext.get("1.0", END)
-        selectedObject.lastedit = datetime.datetime.today()
+        selectedObject.lastedit = datetime.today()
 
 def load_note(event : tk.Event):
     global selectedObject
